@@ -23,6 +23,12 @@ Workstate is designed to be:
 
 ---
 
+## 🌱 Why Workstate?
+
+Because understanding your work requires understanding both **intent** and **time**.
+
+---
+
 ## 🎯 Goals
 
 - Unified task and time tracking
@@ -95,8 +101,4 @@ All product names, trademarks, and registered trademarks are the property of the
 Contribution guidelines will be added once the core architecture stabilizes.
 Bug reports, discussions, and design feedback are welcome.
 
----
 
-## 🌱 Why Workstate?
-
-Because understanding your work requires understanding both **intent** and **time**.
