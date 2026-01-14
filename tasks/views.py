@@ -10,7 +10,7 @@ from django.views.generic import CreateView, UpdateView, ListView, DetailView
 
 from accounts.models import Workspace
 from tasks.forms import TaskForm, TaskListForm
-from tasks.models import Task, TaskList
+from tasks.models import Task, TaskList, Tag
 
 
 class WorkspaceAccessMixin:
@@ -129,7 +129,7 @@ class TaskListDetailView(LoginRequiredMixin, DetailView):
         """Add workspace and tasks to context."""
         context = super().get_context_data(**kwargs)
         context['workspace'] = self.object.workspace
-        context['tasks'] = self.object.tasks.all().select_related('created_by').order_by('-created_at')
+        context['tasks'] = self.object.tasks.all().select_related('created_by').prefetch_related('tags').order_by('-created_at')
         context['active_count'] = self.object.tasks.filter(status='active').count()
         context['completed_count'] = self.object.tasks.filter(status='completed').count()
         return context
@@ -153,11 +153,40 @@ class TaskCreateView(LoginRequiredMixin, TaskListAccessMixin, CreateView):
         return self.request.path
 
     def form_valid(self, form):
-        """Set task_list and created_by before saving task."""
+        """Set task_list and created_by before saving task, then handle tags."""
         form.instance.task_list = self.task_list
         form.instance.created_by = self.request.user
-        messages.success(self.request, 'Task created successfully!')
-        return super().form_valid(form)
+
+        # Save the task first (required before adding many-to-many relationships)
+        response = super().form_valid(form)
+
+        # Handle tag creation and association
+        tag_names = form.cleaned_data.get('tags_input', [])
+        if tag_names:
+            # Create or get tags for this workspace
+            tags = []
+            for tag_name in tag_names:
+                tag = Tag.objects.get_or_create_tag(
+                    name=tag_name,
+                    workspace=self.workspace,
+                    user=self.request.user
+                )
+                if tag:  # get_or_create_tag returns None for empty names
+                    tags.append(tag)
+
+            # Associate tags with task
+            form.instance.tags.set(tags)
+
+            # Success message with tag count
+            tag_count = len(tags)
+            if tag_count == 1:
+                messages.success(self.request, f'Task created successfully with 1 tag!')
+            else:
+                messages.success(self.request, f'Task created successfully with {tag_count} tags!')
+        else:
+            messages.success(self.request, 'Task created successfully!')
+
+        return response
 
     def get_context_data(self, **kwargs):
         """Add task_list, workspace and form action URL to context."""
@@ -190,7 +219,7 @@ class TaskUpdateView(LoginRequiredMixin, UpdateView):
 
     def form_valid(self, form):
         """
-        Handle status checkbox and add success message when task is updated.
+        Handle status checkbox, tags, and add success message when task is updated.
         The checkbox sends 'completed' value when checked, nothing when unchecked.
         """
         # Handle status checkbox - if 'status' is in POST data with value 'completed', set it
@@ -200,8 +229,32 @@ class TaskUpdateView(LoginRequiredMixin, UpdateView):
         else:
             form.instance.status = 'active'
 
-        messages.success(self.request, 'Task updated successfully!')
+        # Save the task first (required before modifying many-to-many relationships)
         response = super().form_valid(form)
+
+        # Handle tag updates - clear existing and reassign
+        tag_names = form.cleaned_data.get('tags_input', [])
+        workspace = self.object.task_list.workspace
+
+        # Clear existing tags
+        form.instance.tags.clear()
+
+        # Add new tags
+        if tag_names:
+            tags = []
+            for tag_name in tag_names:
+                tag = Tag.objects.get_or_create_tag(
+                    name=tag_name,
+                    workspace=workspace,
+                    user=self.request.user
+                )
+                if tag:  # get_or_create_tag returns None for empty names
+                    tags.append(tag)
+
+            # Associate tags with task
+            form.instance.tags.set(tags)
+
+        messages.success(self.request, 'Task updated successfully!')
 
         # For HTMX requests, add HX-Trigger header to close modal
         if self.request.headers.get('HX-Request'):
@@ -237,20 +290,25 @@ class TaskListView(LoginRequiredMixin, ListView):
     paginate_by = 50
 
     def get_queryset(self):
-        """Get tasks for the user, optionally filtered by workspace."""
+        """Get tasks for the user, optionally filtered by workspace and tag."""
         queryset = Task.objects.filter(
             task_list__workspace__owner=self.request.user
-        ).select_related('task_list__workspace', 'created_by', 'task_list').order_by('-created_at')
+        ).select_related('task_list__workspace', 'created_by', 'task_list').prefetch_related('tags').order_by('-created_at')
 
         # Filter by workspace if specified in query params
         workspace_id = self.request.GET.get('workspace')
         if workspace_id:
             queryset = queryset.filter(task_list__workspace_id=workspace_id)
 
+        # Filter by tag if specified in query params
+        tag_name = self.request.GET.get('tag')
+        if tag_name:
+            queryset = queryset.filter(tags__name=tag_name.strip().lower())
+
         return queryset
 
     def get_context_data(self, **kwargs):
-        """Add workspace filter and counts to context."""
+        """Add workspace filter, tag filter, and counts to context."""
         context = super().get_context_data(**kwargs)
 
         # Get current workspace filter
@@ -278,6 +336,11 @@ class TaskListView(LoginRequiredMixin, ListView):
                 status='completed'
             ).count()
 
+        # Get current tag filter
+        tag_name = self.request.GET.get('tag')
+        if tag_name:
+            context['current_tag'] = tag_name.strip().lower()
+
         return context
 
 
@@ -294,7 +357,7 @@ class TaskDetailView(LoginRequiredMixin, DetailView):
         """Filter tasks to only those in workspaces owned by the user."""
         return Task.objects.filter(
             task_list__workspace__owner=self.request.user
-        ).select_related('task_list__workspace', 'created_by', 'task_list')
+        ).select_related('task_list__workspace', 'created_by', 'task_list').prefetch_related('tags')
 
     def get_context_data(self, **kwargs):
         """Add workspace and task_list to context."""

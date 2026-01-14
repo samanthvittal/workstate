@@ -5,6 +5,160 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from datetime import date
+import re
+
+
+class TagManager(models.Manager):
+    """Custom manager for common Tag queries."""
+
+    def for_workspace(self, workspace):
+        """Return tags for a specific workspace."""
+        return self.filter(workspace=workspace)
+
+    def for_user(self, user):
+        """Return tags user has access to (via their workspaces)."""
+        return self.filter(workspace__owner=user)
+
+    def get_or_create_tag(self, name, workspace, user, color=None):
+        """
+        Get existing tag or create new one.
+
+        Args:
+            name: Tag name (will be cleaned and normalized)
+            workspace: Workspace the tag belongs to
+            user: User creating the tag
+            color: Optional hex color (default: #3B82F6 - blue)
+
+        Returns:
+            Tag instance
+        """
+        # Clean and normalize tag name
+        clean_name = name.strip().lower()
+        if not clean_name:
+            return None
+
+        # Get or create tag
+        tag, created = self.get_or_create(
+            name=clean_name,
+            workspace=workspace,
+            defaults={
+                'created_by': user,
+                'color': color or '#3B82F6'  # Default blue
+            }
+        )
+        return tag
+
+    def popular_for_workspace(self, workspace, limit=10):
+        """
+        Return most used tags for a workspace.
+
+        Args:
+            workspace: Workspace to query
+            limit: Maximum number of tags to return
+
+        Returns:
+            QuerySet of tags ordered by usage count
+        """
+        from django.db.models import Count
+        return self.filter(workspace=workspace).annotate(
+            task_count=Count('tasks')
+        ).order_by('-task_count')[:limit]
+
+
+class Tag(models.Model):
+    """
+    Tag model for categorizing tasks.
+
+    Tags provide a flexible way to categorize and filter tasks across task lists.
+    Each tag belongs to a workspace and can be applied to multiple tasks.
+    """
+
+    # Required fields
+    name = models.CharField(
+        max_length=50,
+        help_text="Tag name (max 50 characters)"
+    )
+
+    workspace = models.ForeignKey(
+        'accounts.Workspace',
+        on_delete=models.CASCADE,
+        related_name='tags',
+        help_text="Workspace this tag belongs to"
+    )
+
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='tags_created',
+        help_text="User who created this tag"
+    )
+
+    # Optional fields
+    color = models.CharField(
+        max_length=7,
+        default='#3B82F6',  # Blue
+        help_text="Hex color code for tag (e.g., #3B82F6)"
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When tag was created"
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        help_text="When tag was last updated"
+    )
+
+    # Custom manager
+    objects = TagManager()
+
+    class Meta:
+        db_table = 'tags'
+        verbose_name = 'Tag'
+        verbose_name_plural = 'Tags'
+        ordering = ['name']
+
+        indexes = [
+            models.Index(fields=['workspace'], name='tag_workspace_idx'),
+            models.Index(fields=['created_by'], name='tag_created_by_idx'),
+            models.Index(fields=['name'], name='tag_name_idx'),
+        ]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=['workspace', 'name'],
+                name='unique_tag_name_per_workspace'
+            ),
+        ]
+
+    def __str__(self):
+        return self.name
+
+    def clean(self):
+        """Model validation."""
+        # Name must not be empty or only whitespace
+        if self.name and not self.name.strip():
+            raise ValidationError({
+                'name': 'Name cannot be empty or only whitespace.'
+            })
+
+        # Normalize name to lowercase
+        if self.name:
+            self.name = self.name.strip().lower()
+
+        # Validate color format (hex color)
+        if self.color:
+            if not re.match(r'^#[0-9A-Fa-f]{6}$', self.color):
+                raise ValidationError({
+                    'color': 'Color must be a valid hex code (e.g., #3B82F6).'
+                })
+
+    def save(self, *args, **kwargs):
+        """Override save to ensure clean() is called."""
+        self.full_clean()
+        super().save(*args, **kwargs)
 
 
 class TaskListManager(models.Manager):
@@ -209,6 +363,14 @@ class Task(models.Model):
         null=True,
         blank=True,
         help_text="Specific time for deadline (requires due_date)"
+    )
+
+    # Tags (many-to-many relationship)
+    tags = models.ManyToManyField(
+        'Tag',
+        related_name='tasks',
+        blank=True,
+        help_text="Tags for categorizing this task"
     )
 
     # Timestamps

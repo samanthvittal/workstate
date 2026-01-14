@@ -3,14 +3,26 @@ Forms for task creation and editing.
 """
 from django import forms
 from django.core.exceptions import ValidationError
-from tasks.models import Task, TaskList
+from tasks.models import Task, TaskList, Tag
 
 
 class TaskForm(forms.ModelForm):
     """
     Form for creating and editing tasks.
-    Includes validation for title, description, due dates, priority, and status.
+    Includes validation for title, description, due dates, priority, status, and tags.
     """
+
+    # Custom field for tag input (comma-separated tag names)
+    tags_input = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+            'placeholder': 'e.g., work, urgent, client-a',
+            'maxlength': 500,
+        }),
+        label='Tags',
+        help_text='Add tags separated by commas (e.g., work, urgent, personal)',
+    )
 
     class Meta:
         model = Task
@@ -69,6 +81,11 @@ class TaskForm(forms.ModelForm):
         if not self.instance.pk:
             self.fields['status'].initial = 'active'
 
+        # Pre-populate tags_input with existing tags if editing
+        if self.instance.pk and self.instance.tags.exists():
+            tag_names = [tag.name for tag in self.instance.tags.all()]
+            self.fields['tags_input'].initial = ', '.join(tag_names)
+
     def clean_title(self):
         """
         Validate title field.
@@ -97,6 +114,42 @@ class TaskForm(forms.ModelForm):
             raise ValidationError('Description must be no more than 10,000 characters.')
 
         return description
+
+    def clean_tags_input(self):
+        """
+        Parse and validate comma-separated tag names.
+        Returns a list of cleaned, deduplicated tag names.
+        """
+        tags_input = self.cleaned_data.get('tags_input', '')
+
+        # Return empty list if no tags provided
+        if not tags_input or not tags_input.strip():
+            return []
+
+        # Split by comma and clean each tag name
+        tag_names = [tag.strip().lower() for tag in tags_input.split(',')]
+
+        # Remove empty tags
+        tag_names = [tag for tag in tag_names if tag]
+
+        # De-duplicate while preserving order
+        seen = set()
+        unique_tags = []
+        for tag in tag_names:
+            if tag not in seen:
+                seen.add(tag)
+                unique_tags.append(tag)
+
+        # Validate max 20 tags per task
+        if len(unique_tags) > 20:
+            raise ValidationError('Maximum 20 tags allowed per task.')
+
+        # Validate individual tag lengths
+        for tag in unique_tags:
+            if len(tag) > 50:
+                raise ValidationError(f'Tag "{tag}" exceeds maximum length of 50 characters.')
+
+        return unique_tags
 
     def clean(self):
         """

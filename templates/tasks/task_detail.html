@@ -72,6 +72,23 @@
             </div>
             {% endif %}
 
+            <!-- Tags -->
+            {% if task.tags.exists %}
+            <div class="mb-6">
+                <h2 class="text-sm font-medium text-gray-500 mb-2">Tags</h2>
+                <div class="flex flex-wrap gap-2">
+                    {% for tag in task.tags.all %}
+                        <a href="{% url 'tasks:task-list-all' %}?tag={{ tag.name }}"
+                           class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium text-white hover:opacity-80 transition-opacity"
+                           style="background-color: {{ tag.color }};"
+                           title="Filter tasks by '{{ tag.name }}' tag">
+                            {{ tag.name }}
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Due Date/Time -->
             {% if task.due_date %}
             <div class="mb-6">

@@ -82,6 +82,25 @@
                             </p>
                             {% endif %}
 
+                            <!-- Tags -->
+                            {% if task.tags.exists %}
+                            <div class="mt-2 flex flex-wrap gap-1.5">
+                                {% for tag in task.tags.all|slice:":5" %}
+                                    <a href="{% url 'tasks:task-list-all' %}?tag={{ tag.name }}"
+                                       class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white hover:opacity-80 transition-opacity"
+                                       style="background-color: {{ tag.color }};"
+                                       title="Filter tasks by '{{ tag.name }}' tag">
+                                        {{ tag.name }}
+                                    </a>
+                                {% endfor %}
+                                {% if task.tags.count > 5 %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                        +{{ task.tags.count|add:"-5" }} more
+                                    </span>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+
                             <!-- Task Meta -->
                             <div class="mt-2 flex items-center gap-4 text-sm text-gray-500">
                                 {% if task.due_date %}
