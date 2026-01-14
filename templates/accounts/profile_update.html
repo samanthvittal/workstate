@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Profile - Workstate{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-3xl"
+     x-data="{
+        avatarPreview: null,
+        avatarFile: null,
+        previewAvatar(event) {
+            const file = event.target.files[0];
+            if (file) {
+                this.avatarFile = file;
+                // Validate file size (5MB max)
+                const maxSize = 5 * 1024 * 1024;
+                if (file.size > maxSize) {
+                    alert('Avatar file size must be no more than 5MB. Current size: ' + (file.size / (1024 * 1024)).toFixed(2) + 'MB');
+                    event.target.value = '';
+                    this.avatarPreview = null;
+                    this.avatarFile = null;
+                    return;
+                }
+                // Validate file type
+                const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+                if (!allowedTypes.includes(file.type)) {
+                    alert('Invalid file type. Allowed types: JPG, JPEG, PNG, GIF');
+                    event.target.value = '';
+                    this.avatarPreview = null;
+                    this.avatarFile = null;
+                    return;
+                }
+                // Create preview
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.avatarPreview = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+     }">
+    <div class="bg-white rounded-lg shadow-md p-6 md:p-8">
+        <div class="mb-6">
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900">Edit Profile</h1>
+            <p class="text-gray-600 mt-2">Update your personal information</p>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" class="space-y-6">
+            {% csrf_token %}
+
+            <!-- Avatar Upload Section -->
+            <div class="border-b pb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Profile Avatar
+                </label>
+                <div class="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-6">
+                    <!-- Current/Preview Avatar -->
+                    <div class="flex-shrink-0">
+                        <template x-if="avatarPreview">
+                            <img :src="avatarPreview" alt="Avatar preview" class="w-24 h-24 rounded-full object-cover border-2 border-blue-500">
+                        </template>
+                        <template x-if="!avatarPreview">
+                            {% if profile.avatar %}
+                                <img src="{{ profile.avatar.url }}" alt="Current avatar" class="w-24 h-24 rounded-full object-cover border-2 border-gray-200">
+                            {% else %}
+                                <div class="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center border-2 border-gray-300">
+                                    <svg class="w-12 h-12 text-gray-400" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                                        <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                                    </svg>
+                                </div>
+                            {% endif %}
+                        </template>
+                    </div>
+                    <!-- File Upload -->
+                    <div class="flex-1">
+                        {{ form.avatar }}
+                        {% if form.avatar.help_text %}
+                            <p class="mt-2 text-sm text-gray-500">{{ form.avatar.help_text }}</p>
+                        {% endif %}
+                        {% if form.avatar.errors %}
+                            <div class="mt-2 text-sm text-red-600">
+                                {{ form.avatar.errors }}
+                            </div>
+                        {% endif %}
+                        <div x-show="avatarFile" class="mt-2 text-sm text-gray-600">
+                            <span x-text="avatarFile ? avatarFile.name : ''"></span>
+                            <span x-text="avatarFile ? ' (' + (avatarFile.size / 1024).toFixed(1) + ' KB)' : ''"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Email Field (Read-only) -->
+            <div>
+                <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    Email Address
+                </label>
+                {{ form.email }}
+                {% if form.email.help_text %}
+                    <p class="mt-1 text-sm text-gray-500">{{ form.email.help_text }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Full Name Field -->
+            <div>
+                <label for="{{ form.full_name.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    Full Name
+                </label>
+                {{ form.full_name }}
+                {% if form.full_name.errors %}
+                    <div class="mt-2 text-sm text-red-600">
+                        {{ form.full_name.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Job Title and Company (Side by side on larger screens) -->
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <div>
+                    <label for="{{ form.job_title.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        Job Title
+                    </label>
+                    {{ form.job_title }}
+                    {% if form.job_title.errors %}
+                        <div class="mt-2 text-sm text-red-600">
+                            {{ form.job_title.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.company.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        Company
+                    </label>
+                    {{ form.company }}
+                    {% if form.company.errors %}
+                        <div class="mt-2 text-sm text-red-600">
+                            {{ form.company.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Phone Number Field -->
+            <div>
+                <label for="{{ form.phone_number.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    Phone Number
+                </label>
+                {{ form.phone_number }}
+                {% if form.phone_number.errors %}
+                    <div class="mt-2 text-sm text-red-600">
+                        {{ form.phone_number.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="border-t pt-6 flex flex-col-reverse sm:flex-row justify-end gap-3">
+                <a href="{% url 'accounts:profile' %}"
+                   class="inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    Cancel
+                </a>
+                <button type="submit"
+                        class="inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    Save Profile
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

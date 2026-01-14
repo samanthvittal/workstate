@@ -1,0 +1,207 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Profile - Workstate</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-gray-50" x-data="profileApp()">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-white shadow">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                <h1 class="text-3xl font-bold text-gray-900">Edit Profile</h1>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Error Messages -->
+            {% if form.non_field_errors %}
+                <div class="mb-6">
+                    <div class="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg" role="alert">
+                        {% for error in form.non_field_errors %}
+                            <p class="font-medium">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <div class="bg-white shadow sm:rounded-lg">
+                <form method="post" enctype="multipart/form-data" class="space-y-6 px-4 py-5 sm:p-6">
+                    {% csrf_token %}
+
+                    <!-- Avatar Upload Section -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Profile Picture
+                        </label>
+                        <div class="flex items-center space-x-6">
+                            <!-- Current/Preview Avatar -->
+                            <div>
+                                {% if profile.avatar %}
+                                    <img x-show="!avatarPreview"
+                                         src="{{ profile.avatar.url }}"
+                                         alt="Current avatar"
+                                         class="h-24 w-24 rounded-full object-cover">
+                                {% else %}
+                                    <div x-show="!avatarPreview"
+                                         class="h-24 w-24 rounded-full bg-gray-300 flex items-center justify-center">
+                                        <span class="text-3xl font-bold text-gray-600">
+                                            {{ user.email.0|upper }}
+                                        </span>
+                                    </div>
+                                {% endif %}
+                                <!-- Preview -->
+                                <img x-show="avatarPreview"
+                                     :src="avatarPreview"
+                                     alt="Avatar preview"
+                                     class="h-24 w-24 rounded-full object-cover"
+                                     style="display: none;">
+                            </div>
+
+                            <!-- Upload Input -->
+                            <div class="flex-1">
+                                {{ form.avatar }}
+                                {% if form.avatar.help_text %}
+                                    <p class="mt-2 text-sm text-gray-500">{{ form.avatar.help_text }}</p>
+                                {% endif %}
+                                {% if form.avatar.errors %}
+                                    <div class="mt-2">
+                                        {% for error in form.avatar.errors %}
+                                            <p class="text-sm text-red-600">{{ error }}</p>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Email (Read-only) -->
+                    <div>
+                        <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Email Address
+                        </label>
+                        {{ form.email }}
+                        {% if form.email.help_text %}
+                            <p class="mt-2 text-sm text-gray-500">{{ form.email.help_text }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Full Name -->
+                    <div>
+                        <label for="{{ form.full_name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Full Name
+                        </label>
+                        {{ form.full_name }}
+                        {% if form.full_name.errors %}
+                            <div class="mt-2">
+                                {% for error in form.full_name.errors %}
+                                    <p class="text-sm text-red-600">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Job Title -->
+                    <div>
+                        <label for="{{ form.job_title.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Job Title
+                        </label>
+                        {{ form.job_title }}
+                        {% if form.job_title.errors %}
+                            <div class="mt-2">
+                                {% for error in form.job_title.errors %}
+                                    <p class="text-sm text-red-600">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Company -->
+                    <div>
+                        <label for="{{ form.company.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Company
+                        </label>
+                        {{ form.company }}
+                        {% if form.company.errors %}
+                            <div class="mt-2">
+                                {% for error in form.company.errors %}
+                                    <p class="text-sm text-red-600">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Phone Number -->
+                    <div>
+                        <label for="{{ form.phone_number.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Phone Number
+                        </label>
+                        {{ form.phone_number }}
+                        {% if form.phone_number.errors %}
+                            <div class="mt-2">
+                                {% for error in form.phone_number.errors %}
+                                    <p class="text-sm text-red-600">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Timezone -->
+                    <div>
+                        <label for="{{ form.timezone.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Timezone
+                        </label>
+                        {{ form.timezone }}
+                        {% if form.timezone.help_text %}
+                            <p class="mt-2 text-sm text-gray-500">{{ form.timezone.help_text }}</p>
+                        {% endif %}
+                        {% if form.timezone.errors %}
+                            <div class="mt-2">
+                                {% for error in form.timezone.errors %}
+                                    <p class="text-sm text-red-600">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="flex justify-between items-center pt-5 border-t border-gray-200">
+                        <a href="{% url 'accounts:profile' %}"
+                           class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            Cancel
+                        </a>
+                        <button type="submit"
+                                class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            Save Profile
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function profileApp() {
+            return {
+                avatarPreview: null,
+
+                previewAvatar(event) {
+                    const file = event.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            this.avatarPreview = e.target.result;
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

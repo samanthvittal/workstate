@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>{% block title %}Workstate{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://unpkg.com/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
+    <style>
+        /* Ensure proper desktop rendering */
+        body {
+            min-width: 320px;
+        }
+        @media (min-width: 768px) {
+            .container {
+                max-width: 100%;
+            }
+        }
+
+        /* Prevent layout shift when scrollbar appears/disappears */
+        html {
+            scrollbar-gutter: stable;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 antialiased">
+    <div class="min-h-screen flex flex-col">
+        <!-- Messages (Fixed at top, centered) -->
+        {% if messages %}
+        <div class="fixed top-0 left-0 right-0 z-50 flex justify-center p-4">
+            <div class="max-w-2xl w-full">
+                {% for message in messages %}
+                <div class="{% if message.tags == 'error' %}bg-red-50 border-red-400 text-red-800{% elif message.tags == 'success' %}bg-green-50 border-green-400 text-green-800{% elif message.tags == 'warning' %}bg-yellow-50 border-yellow-400 text-yellow-800{% else %}bg-blue-50 border-blue-400 text-blue-800{% endif %} border-l-4 px-4 py-3 rounded shadow-lg mb-2" role="alert">
+                    <p class="font-medium">{{ message }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <main class="flex-grow flex flex-col">
+            {% block content %}{% endblock %}
+        </main>
+
+        <!-- Modal container for HTMX injections -->
+        <div id="modal" class="z-50"></div>
+
+        <footer class="bg-white border-t border-gray-200 py-4 mt-auto">
+            <div class="container mx-auto px-4 text-center text-gray-600 text-sm">
+                <p>&copy; 2026 Workstate. All rights reserved.</p>
+            </div>
+        </footer>
+    </div>
+</body>
+</html>

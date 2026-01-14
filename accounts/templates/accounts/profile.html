@@ -1,0 +1,130 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - Workstate</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-white shadow">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                <h1 class="text-3xl font-bold text-gray-900">My Profile</h1>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Success Messages -->
+            {% if messages %}
+                <div class="mb-6">
+                    {% for message in messages %}
+                        <div class="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg mb-3" role="alert">
+                            <p class="font-medium">{{ message }}</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+                <!-- Profile Header -->
+                <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
+                    <div>
+                        <h2 class="text-lg leading-6 font-medium text-gray-900">Profile Information</h2>
+                        <p class="mt-1 max-w-2xl text-sm text-gray-500">Personal details and settings</p>
+                    </div>
+                    <a href="{% url 'accounts:profile_edit' %}"
+                       class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Edit Profile
+                    </a>
+                </div>
+
+                <!-- Profile Content -->
+                <div class="border-t border-gray-200">
+                    <dl>
+                        <!-- Avatar -->
+                        <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                            <dt class="text-sm font-medium text-gray-500">Avatar</dt>
+                            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                                {% if profile.avatar %}
+                                    <img src="{{ profile.avatar.url }}"
+                                         alt="{{ profile.full_name }}'s avatar"
+                                         class="h-20 w-20 rounded-full object-cover">
+                                {% else %}
+                                    <div class="h-20 w-20 rounded-full bg-gray-300 flex items-center justify-center">
+                                        <span class="text-2xl font-bold text-gray-600">
+                                            {{ user.email.0|upper }}
+                                        </span>
+                                    </div>
+                                {% endif %}
+                            </dd>
+                        </div>
+
+                        <!-- Full Name -->
+                        <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                            <dt class="text-sm font-medium text-gray-500">Full Name</dt>
+                            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                                {{ profile.full_name|default:"Not set" }}
+                            </dd>
+                        </div>
+
+                        <!-- Email -->
+                        <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                            <dt class="text-sm font-medium text-gray-500">Email Address</dt>
+                            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                                {{ user.email }}
+                                <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    Verified
+                                </span>
+                            </dd>
+                        </div>
+
+                        <!-- Job Title -->
+                        <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                            <dt class="text-sm font-medium text-gray-500">Job Title</dt>
+                            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                                {{ profile.job_title|default:"Not set" }}
+                            </dd>
+                        </div>
+
+                        <!-- Company -->
+                        <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                            <dt class="text-sm font-medium text-gray-500">Company</dt>
+                            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                                {{ profile.company|default:"Not set" }}
+                            </dd>
+                        </div>
+
+                        <!-- Phone Number -->
+                        <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                            <dt class="text-sm font-medium text-gray-500">Phone Number</dt>
+                            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                                {{ profile.phone_number|default:"Not set" }}
+                            </dd>
+                        </div>
+
+                        <!-- Timezone -->
+                        <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                            <dt class="text-sm font-medium text-gray-500">Timezone</dt>
+                            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                                {{ profile.timezone }}
+                            </dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Back Link -->
+            <div class="mt-6">
+                <a href="/" class="text-blue-600 hover:text-blue-800">
+                    &larr; Back to Dashboard
+                </a>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

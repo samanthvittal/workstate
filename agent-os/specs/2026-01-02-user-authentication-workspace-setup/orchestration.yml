@@ -1,0 +1,65 @@
+task_groups:
+  - name: User Models and Profile Extensions
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Workspace Models
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: User Preferences and Security Models
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Registration and Email Verification
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Login and Account Lockout
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Password Reset Flow
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Profile Management
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: User Preferences Management
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Admin User Management Dashboard
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Admin Account Management Actions
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Registration and Login Pages
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Profile and Preferences Pages
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Admin Dashboard UI
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: URL Configuration and Middleware
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Integration Testing and Gap Analysis
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Documentation and Configuration
+    claude_code_subagent: implementer
+    standards:
+      - all

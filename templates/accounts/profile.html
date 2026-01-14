@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% load user_filters %}
+
+{% block title %}Profile - Workstate{% endblock %}
+
+{% block content %}
+{% include "includes/nav.html" %}
+
+<div class="container mx-auto px-4 py-8 max-w-3xl">
+    <div class="bg-white rounded-lg shadow-md p-6 md:p-8">
+        <div class="mb-6">
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900">Your Profile</h1>
+            <p class="text-gray-600 mt-2">View and update your personal information</p>
+        </div>
+
+        <!-- Profile Information Display -->
+        <div class="space-y-6">
+            <!-- Avatar Section -->
+            <div class="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-6">
+                <div class="flex-shrink-0">
+                    {% if profile.avatar %}
+                        <img src="{{ profile.avatar.url }}" alt="Profile avatar" class="w-24 h-24 rounded-full object-cover border-2 border-gray-200">
+                    {% else %}
+                        <div class="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center border-2 border-gray-300">
+                            <svg class="w-12 h-12 text-gray-400" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                    {% endif %}
+                </div>
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-900">{{ profile.full_name|default:user.email }}</h2>
+                    <p class="text-gray-600">{{ profile.job_title|default:"No job title set" }}</p>
+                </div>
+            </div>
+
+            <!-- Profile Details -->
+            <div class="border-t pt-6">
+                <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+                    <div class="sm:col-span-2">
+                        <dt class="text-sm font-medium text-gray-500">Email</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ user.email }}</dd>
+                    </div>
+
+                    <div class="sm:col-span-1">
+                        <dt class="text-sm font-medium text-gray-500">Full Name</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ profile.full_name|default:"Not provided" }}</dd>
+                    </div>
+
+                    <div class="sm:col-span-1">
+                        <dt class="text-sm font-medium text-gray-500">Timezone</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ user.preferences.timezone|default:"UTC" }}</dd>
+                    </div>
+
+                    <div class="sm:col-span-1">
+                        <dt class="text-sm font-medium text-gray-500">Job Title</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ profile.job_title|default:"Not provided" }}</dd>
+                    </div>
+
+                    <div class="sm:col-span-1">
+                        <dt class="text-sm font-medium text-gray-500">Company</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ profile.company|default:"Not provided" }}</dd>
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <dt class="text-sm font-medium text-gray-500">Phone Number</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ profile.phone_number|default:"Not provided" }}</dd>
+                    </div>
+                </dl>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="border-t pt-6 flex flex-col sm:flex-row gap-3">
+                <a href="{% url 'accounts:profile_edit' %}"
+                   class="inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    Edit Profile
+                </a>
+                <a href="{% url 'accounts:preferences' %}"
+                   class="inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    Manage Preferences
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

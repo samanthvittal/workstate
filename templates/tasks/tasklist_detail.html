@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+{% load user_filters %}
+
+{% block title %}{{ task_list.name }} - Workstate{% endblock %}
+
+{% block content %}
+{% include "includes/nav.html" %}
+
+<div class="container mx-auto px-4 py-8 max-w-7xl">
+    <!-- Back Button -->
+    <div class="mb-4">
+        <a href="{% url 'tasks:tasklist-list' workspace_id=workspace.id %}"
+           class="inline-flex items-center text-sm text-gray-600 hover:text-gray-900">
+            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to task lists
+        </a>
+    </div>
+
+    <!-- Task List Header -->
+    <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div class="flex-1">
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-900">{{ task_list.name }}</h1>
+                {% if task_list.description %}
+                <p class="mt-2 text-gray-600">{{ task_list.description }}</p>
+                {% endif %}
+                <div class="mt-4 flex items-center gap-4 text-sm text-gray-500">
+                    <span>{{ active_count }} active tasks</span>
+                    <span>{{ completed_count }} completed</span>
+                </div>
+            </div>
+            <a href="{% url 'tasks:task-create' tasklist_id=task_list.id %}"
+               class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                New Task
+            </a>
+        </div>
+    </div>
+
+    <!-- Tasks -->
+    {% if tasks %}
+    <div class="bg-white shadow-sm rounded-lg overflow-hidden">
+        <ul class="divide-y divide-gray-200">
+            {% for task in tasks %}
+            <li class="hover:bg-gray-50 transition-colors">
+                <div class="px-6 py-4">
+                    <div class="flex items-start justify-between gap-4">
+                        <!-- Task Info -->
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-3">
+                                <!-- Completion Checkbox -->
+                                <input type="checkbox"
+                                       {% if task.status == 'completed' %}checked{% endif %}
+                                       class="h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                                       disabled>
+
+                                <!-- Task Title -->
+                                <a href="{% url 'tasks:task-detail' pk=task.id %}"
+                                   class="text-lg font-medium text-gray-900 hover:text-blue-600 {% if task.status == 'completed' %}line-through text-gray-500{% endif %}">
+                                    {{ task.title }}
+                                </a>
+
+                                <!-- Priority Badge -->
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                    {% if task.priority == 'P1' %}bg-red-100 text-red-800
+                                    {% elif task.priority == 'P2' %}bg-orange-100 text-orange-800
+                                    {% elif task.priority == 'P3' %}bg-yellow-100 text-yellow-800
+                                    {% elif task.priority == 'P4' %}bg-blue-100 text-blue-800
+                                    {% endif %}">
+                                    {{ task.get_priority_display }}
+                                </span>
+                            </div>
+
+                            <!-- Task Description Preview -->
+                            {% if task.description %}
+                            <p class="mt-2 text-sm text-gray-600 line-clamp-2">
+                                {{ task.description|truncatewords:20 }}
+                            </p>
+                            {% endif %}
+
+                            <!-- Task Meta -->
+                            <div class="mt-2 flex items-center gap-4 text-sm text-gray-500">
+                                {% if task.due_date %}
+                                <span class="flex items-center gap-1 {% if task.is_overdue %}text-red-600 font-medium{% endif %}">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    {{ task.due_date }}
+                                    {% if task.due_time %}at {{ task.due_time }}{% endif %}
+                                    {% if task.is_overdue %}(Overdue){% endif %}
+                                </span>
+                                {% endif %}
+                                <span class="flex items-center gap-1">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Created {{ task.created_at|date:"M d, Y" }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="flex items-center gap-2">
+                            <button hx-get="{% url 'tasks:task-edit' pk=task.id %}"
+                                    hx-target="#modal"
+                                    hx-swap="innerHTML"
+                                    class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                                Edit
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% else %}
+    <!-- Empty State -->
+    <div class="bg-white shadow-sm rounded-lg p-12 text-center">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        </svg>
+        <h3 class="mt-2 text-lg font-medium text-gray-900">No tasks yet</h3>
+        <p class="mt-1 text-sm text-gray-500">Get started by creating your first task in this list.</p>
+        <div class="mt-6">
+            <a href="{% url 'tasks:task-create' tasklist_id=task_list.id %}"
+               class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Create your first task
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal Container for HTMX -->
+<div id="modal" class="z-50"></div>
+{% endblock %}

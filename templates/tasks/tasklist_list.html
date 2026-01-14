@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% load user_filters %}
+
+{% block title %}Task Lists - {{ workspace.name }} - Workstate{% endblock %}
+
+{% block content %}
+{% include "includes/nav.html" %}
+
+<div class="container mx-auto px-4 py-8 max-w-7xl">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">{{ workspace.name }}</h1>
+            <p class="text-gray-600 mt-1">Task Lists</p>
+        </div>
+        <a href="{% url 'tasks:tasklist-create' workspace_id=workspace.id %}"
+           class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            New Task List
+        </a>
+    </div>
+
+    <!-- Task Lists -->
+    {% if task_lists %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for task_list in task_lists %}
+        <div class="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <a href="{% url 'tasks:tasklist-detail' tasklist_id=task_list.id %}"
+                   class="text-lg font-semibold text-gray-900 hover:text-blue-600">
+                    {{ task_list.name }}
+                </a>
+                {% if task_list.description %}
+                <p class="mt-1 text-sm text-gray-600 line-clamp-2">
+                    {{ task_list.description|truncatewords:15 }}
+                </p>
+                {% endif %}
+            </div>
+
+            <div class="px-6 py-4 bg-gray-50">
+                <div class="flex items-center justify-between text-sm">
+                    <div class="flex items-center gap-4">
+                        <span class="flex items-center text-blue-600">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>
+                            {{ task_list.active_count }} active
+                        </span>
+                        <span class="flex items-center text-green-600">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            {{ task_list.completed_count }} done
+                        </span>
+                    </div>
+                    <a href="{% url 'tasks:tasklist-detail' tasklist_id=task_list.id %}"
+                       class="text-blue-600 hover:text-blue-700 font-medium">
+                        View →
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- Empty State -->
+    <div class="bg-white shadow-sm rounded-lg p-12 text-center">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+        </svg>
+        <h3 class="mt-2 text-lg font-medium text-gray-900">No task lists yet</h3>
+        <p class="mt-1 text-sm text-gray-500">Get started by creating your first task list.</p>
+        <div class="mt-6">
+            <a href="{% url 'tasks:tasklist-create' workspace_id=workspace.id %}"
+               class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Create your first task list
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal Container for HTMX -->
+<div id="modal" class="z-50"></div>
+{% endblock %}

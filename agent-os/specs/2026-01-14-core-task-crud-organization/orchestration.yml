@@ -1,0 +1,17 @@
+task_groups:
+  - name: Django Forms & Validation
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Django Class-Based Views & Mixins
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Templates, HTMX & Alpine.js
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: URL Configuration & Full Integration Testing
+    claude_code_subagent: implementer
+    standards:
+      - all

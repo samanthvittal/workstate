@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - User Management - Workstate{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- Mobile menu button -->
+    <div class="lg:hidden" x-data="{ mobileMenuOpen: false }">
+        <button @click="mobileMenuOpen = !mobileMenuOpen" class="fixed top-4 left-4 z-50 bg-white p-2 rounded-md shadow-lg lg:hidden">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+        </button>
+
+        <!-- Mobile sidebar -->
+        <div x-show="mobileMenuOpen" @click.away="mobileMenuOpen = false" class="fixed inset-0 z-40 lg:hidden" x-cloak>
+            <div class="fixed inset-0 bg-gray-600 bg-opacity-75"></div>
+            <nav class="fixed top-0 left-0 bottom-0 flex flex-col w-64 bg-white shadow-xl">
+                <div class="flex items-center justify-between p-4 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">Admin Menu</h2>
+                    <button @click="mobileMenuOpen = false" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="flex-1 overflow-y-auto p-4">
+                    <a href="{% url 'accounts:admin_user_list' %}" class="block px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg mb-2">
+                        User Management
+                    </a>
+                    <a href="/" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg">
+                        Back to Dashboard
+                    </a>
+                </div>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Desktop layout -->
+    <div class="flex">
+        <!-- Sidebar - Desktop -->
+        <aside class="hidden lg:flex lg:flex-col w-64 bg-white border-r border-gray-200 fixed h-screen">
+            <div class="flex items-center justify-center h-16 border-b border-gray-200">
+                <h2 class="text-xl font-bold text-gray-900">Admin Panel</h2>
+            </div>
+            <nav class="flex-1 overflow-y-auto p-4">
+                <a href="{% url 'accounts:admin_user_list' %}" class="block px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg mb-2">
+                    User Management
+                </a>
+                <a href="/" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg">
+                    Back to Dashboard
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main content area -->
+        <main class="flex-1 lg:ml-64">
+            <!-- Header -->
+            <header class="bg-white border-b border-gray-200">
+                <div class="px-4 sm:px-6 lg:px-8 py-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-900">User Management</h1>
+                            <p class="mt-1 text-sm text-gray-600">Manage all user accounts and permissions</p>
+                        </div>
+
+                        <!-- Search bar -->
+                        <div class="mt-4 sm:mt-0 w-full sm:w-auto">
+                            <input
+                                type="text"
+                                name="search"
+                                placeholder="Search by name or email..."
+                                value="{{ search_query }}"
+                                class="w-full sm:w-64 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                hx-get="{% url 'accounts:admin_user_list' %}"
+                                hx-trigger="keyup changed delay:500ms"
+                                hx-target="#user-list-container"
+                                hx-include="[name='status']"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Filter dropdown -->
+                    <div class="mt-4">
+                        <select
+                            name="status"
+                            class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            hx-get="{% url 'accounts:admin_user_list' %}"
+                            hx-trigger="change"
+                            hx-target="#user-list-container"
+                            hx-include="[name='search']"
+                        >
+                            <option value="" {% if not status_filter %}selected{% endif %}>All Users</option>
+                            <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+                            <option value="locked" {% if status_filter == 'locked' %}selected{% endif %}>Locked</option>
+                            <option value="unverified" {% if status_filter == 'unverified' %}selected{% endif %}>Unverified</option>
+                        </select>
+                    </div>
+                </div>
+            </header>
+
+            <!-- User list table -->
+            <div class="px-4 sm:px-6 lg:px-8 py-8" id="user-list-container">
+                {% include 'accounts/admin_user_list_partial.html' %}
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}
