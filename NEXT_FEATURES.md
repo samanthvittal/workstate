@@ -1,155 +1,199 @@
-# Next Features - Task Labels & Tags (T007)
+# Next Features - Task Due Date Management (T010)
 
 **Created:** January 14, 2026
-**Branch:** feature-task-labels-tags
-**Previous Commit:** 75c8e90 - Implement Core Task CRUD & TaskList Organization (T001-T006)
+**Branch:** feature-task-due-date-management
+**Previous Commit:** 8a9a7cc - Implement Task Labels & Tags (T007)
 
 ## Summary of Completed Work
 
-### ✅ Tasks Completed: T001-T006
+### ✅ Features Completed: T001-T007
 
-We have successfully implemented the foundation of Workstate's task management system:
+**Phase 1: Authentication & Workspace** (Complete)
+- User authentication and workspace management
+- Permission system and user profiles
 
-**T001 - Basic Task CRUD**
-- Create, read, update, delete tasks
-- TaskList organization for better categorization
-- Full CRUD operations with permission checking
+**Phase 2: Core Task CRUD (T001-T006)** (Complete - 32/32 tests)
+- Basic task CRUD operations
+- Task title, description, due date, due time, priority levels
+- TaskList hierarchy and organization
 
-**T002 - Task Title**
-- Required field with validation
-- 255 character limit
-- Whitespace trimming
+**Phase 3: Task Labels & Tags (T007)** (Complete - 39/39 tests)
+- Tag model with workspace scoping
+- Comma-separated tag input and automatic creation
+- Tag filtering and color-coded badges
+- Query optimization
 
-**T003 - Task Description**
-- Markdown support
-- Optional field
-- 10,000 character limit
+**Total Tests Passing:** 71+ tests across all features
 
-**T004 - Due Date**
-- Date picker with proper validation
-- Overdue detection
+## Next Feature: T010 - Task Due Date Management
 
-**T005 - Due Time**
-- Optional time field
-- Validation: requires due_date if set
+**Priority:** P0 (High Priority for MVP)
+**Description:** Enhanced due date views and management
+**Branch:** feature-task-due-date-management
+**Estimated Time:** 4-6 hours
+**Complexity:** Low-Medium
 
-**T006 - Priority Levels**
-- 4 levels: P1 (Urgent), P2 (High), P3 (Medium), P4 (Low)
-- Color-coded badges (Red, Orange, Yellow, Blue)
-- Visual indicators throughout UI
+### Why This Feature Next?
 
-### ✅ Additional Enhancements Completed
-
-**TaskList Feature (Beyond Core Spec)**
-- Workspace → TaskLists → Tasks hierarchy
-- TaskList CRUD operations
-- Data migration from old structure
-- 4 migrations with safe data handling
-
-**Navigation & UX Improvements**
-- Modern navigation bar with dropdowns
-- Workspace selector (always visible)
-- User menu with avatar/initials
-- Dashboard redesign with task lists
-- Fixed alignment issues
-
-**Test Coverage**
-- 32/32 tests passing (100%)
-- Comprehensive test coverage across forms, views, templates, and integration
-
-## Next Feature: T007 - Labels/Tags
-
-**Priority:** P0 (Critical for MVP)
-**Description:** Multiple tags per task for categorization
-**Branch:** feature-task-labels-tags
+1. **Builds on existing foundation:** We already have due_date and due_time fields
+2. **High user value:** "Today", "Upcoming", and "Overdue" views are essential
+3. **Low complexity:** Primarily view logic and filtering (no new models)
+4. **Quick win:** Can be completed in one session
+5. **Core workflow:** Time management is fundamental to task management
 
 ### Feature Requirements
 
-According to the spec (workstate/spec.md line 176):
-- Multiple tags per task
-- Tag creation and management
-- Tag filtering and search
-- Color-coded tags (optional)
-- Tag autocomplete/suggestions
+According to user needs and task management best practices:
+
+#### Core Views
+1. **Today View** - Tasks due today
+2. **Upcoming View** - Tasks due in next 7 days
+3. **Overdue View** - Tasks past due date (active only)
+4. **No Due Date View** - Tasks without due dates
+
+#### Quick Actions
+- Set due date to "Today"
+- Set due date to "Tomorrow"
+- Set due date to "Next Week" (7 days from now)
+- Set due date to "Custom" (date picker)
+
+#### Visual Indicators
+- Red badge for overdue tasks
+- Yellow badge for today's tasks
+- Orange badge for upcoming (within 3 days)
+- Gray for no due date
+
+#### Filtering & Sorting
+- Sort by due date (earliest first)
+- Filter by date range
+- Combine with tag filtering
 
 ### Implementation Plan
 
-#### 1. Database Layer
-- **Tag Model**
-  - `name` (CharField, max 50, required, unique per workspace)
-  - `color` (CharField, optional, hex color)
-  - `workspace` (ForeignKey to Workspace)
-  - `created_by` (ForeignKey to User)
-  - `created_at`, `updated_at` (auto timestamps)
+#### 1. Views Layer (Primary Focus)
+- **Create DueDateViewMixin** for common date filtering logic
+- **TasksTodayView** - Filter tasks due today
+- **TasksUpcomingView** - Filter tasks due in next 7 days
+- **TasksOverdueView** - Filter overdue tasks
+- **TasksNoDueDateView** - Filter tasks without due dates
+- Update TaskListView to support date_filter query parameter
 
-- **Task-Tag Relationship**
-  - Many-to-Many relationship via `tags` field on Task model
-  - Or through model for additional metadata (order, etc.)
+#### 2. Forms Layer (Minor Updates)
+- Add due date quick action buttons to TaskForm
+- JavaScript/Alpine.js to set date on button click
+- Visual date picker enhancements
 
-#### 2. Forms Layer
-- Update TaskForm to include tags field
-- Tag selection widget (multi-select or tag input)
-- Tag creation inline (if tag doesn't exist, create it)
-- TagForm for managing tags separately
+#### 3. Templates Layer
+- **Navigation links** for Today/Upcoming/Overdue
+- **Date badges** with color coding on task cards
+- **Quick action buttons** in task form
+- **Date range selector** in task list header
+- Update task card template to show enhanced date badges
 
-#### 3. Views Layer
-- Tag CRUD views (optional: may use inline creation only)
-- Update TaskCreateView and TaskUpdateView for tags
-- Tag filtering in task list views
-- Tag management page (optional for MVP)
+#### 4. URL Routing
+```python
+path('tasks/today/', TasksTodayView.as_view(), name='tasks-today')
+path('tasks/upcoming/', TasksUpcomingView.as_view(), name='tasks-upcoming')
+path('tasks/overdue/', TasksOverdueView.as_view(), name='tasks-overdue')
+path('tasks/no-due-date/', TasksNoDueDateView.as_view(), name='tasks-no-due-date')
+```
 
-#### 4. Templates Layer
-- Tag input field in task forms
-- Tag display on task cards/lists
-- Tag badges with colors
-- Tag filtering UI
-- Tag autocomplete (Alpine.js)
+#### 5. Testing
+- Test today view filtering (2 tests)
+- Test upcoming view date range (2 tests)
+- Test overdue view filtering (2 tests)
+- Test no due date filtering (2 tests)
+- Test date badge display (2 tests)
+- **Target:** 10-12 tests
 
-#### 5. URL Routing
-- Tag management URLs (if separate views)
-- Tag filtering URLs (`/tasks/?tag=work`)
+### Task Breakdown
 
-### Estimated Complexity
+**Task Group 1: Views & Filtering** (6 tests)
+- Create DueDateViewMixin
+- Implement TasksTodayView
+- Implement TasksUpcomingView
+- Implement TasksOverdueView
+- Implement TasksNoDueDateView
+- Write view tests
 
-**Database:** Low - Simple many-to-many relationship
-**Backend:** Medium - Tag creation logic, filtering
-**Frontend:** Medium - Tag input UI, autocomplete
-**Tests:** Medium - Tag CRUD, filtering, validation
+**Task Group 2: Templates & Navigation** (4 tests)
+- Add navigation links (Today/Upcoming/Overdue)
+- Update task card date badges
+- Add date quick actions to form
+- Add date range selector
+- Write template rendering tests
+
+**Task Group 3: Forms Enhancement** (Optional)
+- Add quick action buttons to TaskForm
+- Alpine.js for date setting
+- Visual enhancements
+
+**Task Group 4: URL Routing**
+- Add new URL patterns
+- Update URL tests
 
 ### Success Criteria
 
-- ✅ Users can add multiple tags to tasks
-- ✅ Tags can be created inline while creating/editing tasks
-- ✅ Tags display on task cards with colors
-- ✅ Users can filter tasks by tags
-- ✅ Tag names are unique per workspace
-- ✅ Tests cover tag creation, validation, filtering
+- ✅ Users can view tasks due today
+- ✅ Users can view upcoming tasks (next 7 days)
+- ✅ Users can view overdue tasks
+- ✅ Tasks display with color-coded date badges
+- ✅ Navigation includes Today/Upcoming/Overdue links
+- ✅ Date views can be combined with tag filtering
+- ✅ 10-12 tests pass
 - ✅ Responsive design on all devices
 
-## Alternative: T032-T033 First
+### Files to Create/Modify
 
-If labels/tags seem too complex, we could instead implement:
+**New Files:**
+- `agent-os/specs/2026-01-14-task-due-date-management/tasks.md`
+- `agent-os/specs/2026-01-14-task-due-date-management/spec.md`
+- `tasks/tests/test_task_due_date_views.py`
 
-**T032 - Task Ordering** (P0)
-- Manual drag-drop reordering within task list
-- Position field on Task model
-- jQuery UI Sortable or SortableJS
-- HTMX for position updates
+**Modified Files:**
+- `tasks/views.py` (add new views)
+- `tasks/urls.py` (add new URL patterns)
+- `templates/includes/nav.html` (add date view links)
+- `templates/tasks/task_list.html` (enhanced date badges)
+- `templates/tasks/_task_form_fields.html` (optional quick actions)
 
-**T033 - Task Moving** (P0)
-- Move tasks between task lists
-- Move tasks between workspaces (with permission check)
-- Dropdown or drag-drop interface
+### Dependencies
 
-Both are P0 priority and might be simpler to implement as they build on existing TaskList functionality.
+- None! This feature builds entirely on existing infrastructure
+
+### Alternative Next Features
+
+If T010 doesn't seem like the right fit, alternatives include:
+
+**T008: Task Status & Completion**
+- Enhanced status management
+- Completion tracking
+- Archive functionality
+
+**T009: Task Search**
+- Full-text search
+- Search across workspaces
+- Search results page
+
+**T011: Task Ordering & Moving**
+- Drag-drop reordering
+- Move between task lists
+- Position tracking
 
 ## Recommendation
 
-**Proceed with T007 (Labels/Tags)** because:
-1. It's P0 priority (critical for MVP)
-2. It's a natural extension of task creation
-3. Users expect tagging in modern task managers
-4. It enables better task organization and filtering
-5. Foundation for future features (smart lists, filters)
+**Proceed with T010 (Task Due Date Management)** because:
+1. Lowest complexity of the high-priority features
+2. Builds directly on existing due_date field
+3. High user value for time management
+4. Can be completed quickly (4-6 hours)
+5. Sets up foundation for calendar views later
 
-Let me know which feature you'd like to implement next!
+After T010, implement T008 (Status) → T009 (Search) → T011 (Ordering) for a complete MVP.
+
+---
+
+**Ready to start?** Create the feature branch:
+```bash
+git checkout -b feature-task-due-date-management
+```

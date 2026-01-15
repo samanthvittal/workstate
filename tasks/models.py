@@ -4,7 +4,7 @@ Task models for task management.
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from datetime import date
+from datetime import date, timedelta
 import re
 
 
@@ -291,6 +291,37 @@ class TaskManager(models.Manager):
             due_date=today
         )
 
+    def upcoming(self, days=7):
+        """
+        Return tasks due in the next specified number of days (excluding today).
+
+        Args:
+            days: Number of days to look ahead (default: 7)
+
+        Returns:
+            QuerySet of active tasks due between tomorrow and days from now
+        """
+        today = date.today()
+        tomorrow = today + timedelta(days=1)
+        end_date = today + timedelta(days=days)
+        return self.filter(
+            status='active',
+            due_date__gte=tomorrow,
+            due_date__lte=end_date
+        ).order_by('due_date')
+
+    def no_due_date(self):
+        """
+        Return active tasks without a due date.
+
+        Returns:
+            QuerySet of active tasks with no due_date, ordered by created_at descending
+        """
+        return self.filter(
+            status='active',
+            due_date__isnull=True
+        ).order_by('-created_at')
+
 
 class Task(models.Model):
     """
@@ -452,6 +483,43 @@ class Task(models.Model):
             'P4': 'blue',   # Low - Blue
         }
         return colors.get(self.priority, 'gray')
+
+    def get_due_status(self):
+        """
+        Get the due date status of the task.
+
+        Returns:
+            String: 'overdue', 'due_today', 'upcoming', or 'no_due_date'
+        """
+        if not self.due_date:
+            return 'no_due_date'
+
+        if self.status == 'completed':
+            return 'no_due_date'
+
+        if self.is_overdue():
+            return 'overdue'
+
+        if self.is_due_today():
+            return 'due_today'
+
+        return 'upcoming'
+
+    def get_due_status_color(self):
+        """
+        Get Tailwind CSS color class for due date status.
+
+        Returns:
+            String: 'red', 'yellow', 'green', or 'gray'
+        """
+        status = self.get_due_status()
+        colors = {
+            'overdue': 'red',
+            'due_today': 'yellow',
+            'upcoming': 'green',
+            'no_due_date': 'gray',
+        }
+        return colors.get(status, 'gray')
 
     def clean(self):
         """Model validation."""

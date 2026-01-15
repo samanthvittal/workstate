@@ -4,9 +4,12 @@ Views for task and task list creation, editing, listing, and detail display.
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
-from django.shortcuts import get_object_or_404
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
+from django.views import View
 from django.views.generic import CreateView, UpdateView, ListView, DetailView
+from datetime import date, timedelta
 
 from accounts.models import Workspace
 from tasks.forms import TaskForm, TaskListForm
@@ -279,10 +282,54 @@ class TaskUpdateView(LoginRequiredMixin, UpdateView):
         return context
 
 
+class TaskQuickDateView(LoginRequiredMixin, View):
+    """
+    View for handling quick date actions via HTMX.
+    Sets task due_date to today, tomorrow, next week, or clears it.
+    """
+
+    def post(self, request, pk):
+        """Handle POST request to update task due_date."""
+        # Get task and verify ownership
+        task = get_object_or_404(
+            Task.objects.select_related('task_list__workspace', 'created_by'),
+            pk=pk,
+            task_list__workspace__owner=request.user
+        )
+
+        # Get action from POST data
+        action = request.POST.get('action')
+
+        # Calculate new due_date based on action
+        if action == 'today':
+            task.due_date = date.today()
+        elif action == 'tomorrow':
+            task.due_date = date.today() + timedelta(days=1)
+        elif action == 'next_week':
+            # Calculate next Monday
+            today = date.today()
+            days_until_monday = (7 - today.weekday()) % 7
+            if days_until_monday == 0:
+                days_until_monday = 7  # If today is Monday, set to next Monday
+            task.due_date = today + timedelta(days=days_until_monday)
+        elif action == 'clear':
+            task.due_date = None
+        else:
+            return HttpResponse('Invalid action', status=400)
+
+        # Save task
+        task.save(update_fields=['due_date', 'updated_at'])
+
+        # Return updated task card partial
+        response = render(request, 'tasks/_task_card.html', {'task': task})
+        response['HX-Trigger'] = 'taskUpdated'
+        return response
+
+
 class TaskListView(LoginRequiredMixin, ListView):
     """
     View for displaying all tasks across all workspaces for a user.
-    Can be filtered by workspace via query parameter.
+    Can be filtered by workspace, tag, and due date view via query parameters.
     """
     model = Task
     template_name = 'tasks/task_list.html'
@@ -290,7 +337,7 @@ class TaskListView(LoginRequiredMixin, ListView):
     paginate_by = 50
 
     def get_queryset(self):
-        """Get tasks for the user, optionally filtered by workspace and tag."""
+        """Get tasks for the user, optionally filtered by workspace, tag, and due date view."""
         queryset = Task.objects.filter(
             task_list__workspace__owner=self.request.user
         ).select_related('task_list__workspace', 'created_by', 'task_list').prefetch_related('tags').order_by('-created_at')
@@ -305,10 +352,71 @@ class TaskListView(LoginRequiredMixin, ListView):
         if tag_name:
             queryset = queryset.filter(tags__name=tag_name.strip().lower())
 
+        # Filter by due date view if specified in query params
+        view = self.request.GET.get('view')
+        if view == 'today':
+            today = date.today()
+            queryset = queryset.filter(
+                status='active',
+                due_date=today
+            )
+        elif view == 'upcoming':
+            days = int(self.request.GET.get('days', 7))
+            today = date.today()
+            end_date = today + timedelta(days=days)
+            queryset = queryset.filter(
+                status='active',
+                due_date__gt=today,
+                due_date__lte=end_date
+            )
+        elif view == 'overdue':
+            today = date.today()
+            queryset = queryset.filter(
+                status='active',
+                due_date__lt=today
+            )
+        elif view == 'no_due_date':
+            queryset = queryset.filter(
+                status='active',
+                due_date__isnull=True
+            )
+
         return queryset
 
+    def get_due_date_counts(self):
+        """
+        Get task counts for due date views.
+
+        Returns:
+            Dictionary with today_count, overdue_count, and upcoming_count
+        """
+        from datetime import date
+
+        base_queryset = Task.objects.filter(
+            task_list__workspace__owner=self.request.user,
+            status='active'
+        )
+
+        # Apply workspace filter if specified
+        workspace_id = self.request.GET.get('workspace')
+        if workspace_id:
+            base_queryset = base_queryset.filter(task_list__workspace_id=workspace_id)
+
+        # Apply tag filter if specified
+        tag_name = self.request.GET.get('tag')
+        if tag_name:
+            base_queryset = base_queryset.filter(tags__name=tag_name.strip().lower())
+
+        today = date.today()
+
+        return {
+            'today_count': base_queryset.filter(due_date=today).count(),
+            'overdue_count': base_queryset.filter(due_date__lt=today).count(),
+            'upcoming_count': base_queryset.filter(due_date__gt=today).count(),
+        }
+
     def get_context_data(self, **kwargs):
-        """Add workspace filter, tag filter, and counts to context."""
+        """Add workspace filter, tag filter, due date counts, and active view to context."""
         context = super().get_context_data(**kwargs)
 
         # Get current workspace filter
@@ -340,6 +448,29 @@ class TaskListView(LoginRequiredMixin, ListView):
         tag_name = self.request.GET.get('tag')
         if tag_name:
             context['current_tag'] = tag_name.strip().lower()
+
+        # Get current due date view
+        view = self.request.GET.get('view')
+        context['active_view'] = view
+        context['upcoming_days'] = int(self.request.GET.get('days', 7))
+
+        # Get due date counts for badges
+        context.update(self.get_due_date_counts())
+
+        # Build active filters list
+        active_filters = []
+        if view:
+            if view == 'today':
+                active_filters.append({'type': 'view', 'label': 'Due Today', 'value': 'today'})
+            elif view == 'upcoming':
+                days = context['upcoming_days']
+                active_filters.append({'type': 'view', 'label': f'Upcoming ({days} days)', 'value': 'upcoming'})
+            elif view == 'overdue':
+                active_filters.append({'type': 'view', 'label': 'Overdue', 'value': 'overdue'})
+            elif view == 'no_due_date':
+                active_filters.append({'type': 'view', 'label': 'No Due Date', 'value': 'no_due_date'})
+
+        context['active_filters'] = active_filters
 
         return context
 

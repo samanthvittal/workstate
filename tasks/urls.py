@@ -3,7 +3,7 @@ URL configuration for tasks app.
 """
 from django.urls import path
 from tasks.views import (
-    TaskCreateView, TaskUpdateView, TaskListView, TaskDetailView,
+    TaskCreateView, TaskUpdateView, TaskListView, TaskDetailView, TaskQuickDateView,
     TaskListCreateView, TaskListListView, TaskListDetailView
 )
 
@@ -19,6 +19,7 @@ urlpatterns = [
     path('tasklist/<int:tasklist_id>/tasks/create/', TaskCreateView.as_view(), name='task-create'),
     path('tasks/<int:pk>/', TaskDetailView.as_view(), name='task-detail'),
     path('tasks/<int:pk>/edit/', TaskUpdateView.as_view(), name='task-edit'),
+    path('tasks/<int:pk>/quick-date/', TaskQuickDateView.as_view(), name='task-quick-date'),
 
     # All tasks view (can be filtered by workspace via query param)
     path('tasks/', TaskListView.as_view(), name='task-list-all'),

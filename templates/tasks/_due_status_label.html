@@ -1,0 +1,27 @@
+{% load user_filters %}
+{% if task.due_date %}
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium
+    {% if task.get_due_status_color == 'red' %}bg-red-100 text-red-800
+    {% elif task.get_due_status_color == 'yellow' %}bg-yellow-100 text-yellow-800
+    {% elif task.get_due_status_color == 'green' %}bg-green-100 text-green-800
+    {% elif task.get_due_status_color == 'gray' %}bg-gray-100 text-gray-800
+    {% endif %}">
+    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+    {% if task.is_overdue %}
+        Overdue
+    {% elif task.is_due_today %}
+        Due Today
+    {% elif task.get_due_status == 'upcoming' %}
+        {{ task.due_date }}
+    {% endif %}
+</span>
+{% else %}
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+    No Due Date
+</span>
+{% endif %}
