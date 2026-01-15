@@ -4,14 +4,17 @@ Views for task and task list creation, editing, listing, and detail display.
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
+from django.db import transaction
+from django.db.models import Case, When, Value, IntegerField, Q, Count
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views import View
 from django.views.generic import CreateView, UpdateView, ListView, DetailView
 from datetime import date, timedelta
 
-from accounts.models import Workspace
+from accounts.models import Workspace, UserPreference
 from tasks.forms import TaskForm, TaskListForm
 from tasks.models import Task, TaskList, Tag
 
@@ -132,9 +135,16 @@ class TaskListDetailView(LoginRequiredMixin, DetailView):
         """Add workspace and tasks to context."""
         context = super().get_context_data(**kwargs)
         context['workspace'] = self.object.workspace
-        context['tasks'] = self.object.tasks.all().select_related('created_by').prefetch_related('tags').order_by('-created_at')
-        context['active_count'] = self.object.tasks.filter(status='active').count()
-        context['completed_count'] = self.object.tasks.filter(status='completed').count()
+        context['tasks'] = self.object.tasks.filter(is_archived=False).select_related('created_by').prefetch_related('tags').annotate(
+            sort_order=Case(
+                When(status='completed', then=Value(1)),
+                default=Value(0),
+                output_field=IntegerField()
+            )
+        ).order_by('sort_order', '-created_at')
+        context['active_count'] = self.object.tasks.filter(status='active', is_archived=False).count()
+        context['completed_count'] = self.object.tasks.filter(status='completed', is_archived=False).count()
+        context['total_count'] = context['active_count'] + context['completed_count']
         return context
 
 
@@ -282,6 +292,31 @@ class TaskUpdateView(LoginRequiredMixin, UpdateView):
         return context
 
 
+class TaskToggleStatusView(LoginRequiredMixin, View):
+    """
+    View for toggling task completion status via HTMX.
+    Handles POST request to flip task status between active and completed.
+    """
+
+    def post(self, request, pk):
+        """Handle POST request to toggle task status."""
+        # Get task and verify ownership
+        task = get_object_or_404(
+            Task.objects.select_related('task_list__workspace', 'created_by'),
+            pk=pk,
+            task_list__workspace__owner=request.user
+        )
+
+        # Toggle status
+        if task.status == 'active':
+            task.mark_complete()
+        else:
+            task.mark_active()
+
+        # Return updated task card partial
+        return render(request, 'tasks/_task_card.html', {'task': task})
+
+
 class TaskQuickDateView(LoginRequiredMixin, View):
     """
     View for handling quick date actions via HTMX.
@@ -329,7 +364,7 @@ class TaskQuickDateView(LoginRequiredMixin, View):
 class TaskListView(LoginRequiredMixin, ListView):
     """
     View for displaying all tasks across all workspaces for a user.
-    Can be filtered by workspace, tag, and due date view via query parameters.
+    Can be filtered by workspace, tag, status, and due date view via query parameters.
     """
     model = Task
     template_name = 'tasks/task_list.html'
@@ -337,22 +372,46 @@ class TaskListView(LoginRequiredMixin, ListView):
     paginate_by = 50
 
     def get_queryset(self):
-        """Get tasks for the user, optionally filtered by workspace, tag, and due date view."""
-        queryset = Task.objects.filter(
-            task_list__workspace__owner=self.request.user
-        ).select_related('task_list__workspace', 'created_by', 'task_list').prefetch_related('tags').order_by('-created_at')
+        """Get tasks for the user, filtered by workspace, tag, status, and due date view."""
+        # Get or create user preferences
+        user_prefs, created = UserPreference.objects.get_or_create(user=self.request.user)
 
-        # Filter by workspace if specified in query params
+        # Get status filter from query parameter or user preference
+        status_filter = self.request.GET.get('status', user_prefs.default_task_status_filter)
+
+        # Update user preference if status filter changed
+        if status_filter != user_prefs.default_task_status_filter:
+            user_prefs.default_task_status_filter = status_filter
+            user_prefs.save(update_fields=['default_task_status_filter'])
+
+        # Base queryset with optimizations
+        queryset = Task.objects.filter(
+            task_list__workspace__owner=self.request.user,
+            is_archived=False
+        ).select_related(
+            'task_list__workspace',
+            'created_by',
+            'task_list'
+        ).prefetch_related('tags')
+
+        # Apply status filter
+        if status_filter == 'active':
+            queryset = queryset.filter(status='active')
+        elif status_filter == 'completed':
+            queryset = queryset.filter(status='completed')
+        # 'all' filter shows both active and completed tasks
+
+        # Filter by workspace if specified
         workspace_id = self.request.GET.get('workspace')
         if workspace_id:
             queryset = queryset.filter(task_list__workspace_id=workspace_id)
 
-        # Filter by tag if specified in query params
+        # Filter by tag if specified
         tag_name = self.request.GET.get('tag')
         if tag_name:
             queryset = queryset.filter(tags__name=tag_name.strip().lower())
 
-        # Filter by due date view if specified in query params
+        # Filter by due date view if specified
         view = self.request.GET.get('view')
         if view == 'today':
             today = date.today()
@@ -381,6 +440,15 @@ class TaskListView(LoginRequiredMixin, ListView):
                 due_date__isnull=True
             )
 
+        # Add sort_order annotation for completed task positioning
+        queryset = queryset.annotate(
+            sort_order=Case(
+                When(status='completed', then=Value(1)),
+                default=Value(0),
+                output_field=IntegerField()
+            )
+        ).order_by('sort_order', '-created_at')
+
         return queryset
 
     def get_due_date_counts(self):
@@ -390,11 +458,10 @@ class TaskListView(LoginRequiredMixin, ListView):
         Returns:
             Dictionary with today_count, overdue_count, and upcoming_count
         """
-        from datetime import date
-
         base_queryset = Task.objects.filter(
             task_list__workspace__owner=self.request.user,
-            status='active'
+            status='active',
+            is_archived=False
         )
 
         # Apply workspace filter if specified
@@ -415,34 +482,58 @@ class TaskListView(LoginRequiredMixin, ListView):
             'upcoming_count': base_queryset.filter(due_date__gt=today).count(),
         }
 
+    def get_status_counts(self):
+        """
+        Get task counts for status filters.
+
+        Returns:
+            Dictionary with active_count, completed_count, and all_count
+        """
+        base_queryset = Task.objects.filter(
+            task_list__workspace__owner=self.request.user,
+            is_archived=False
+        )
+
+        # Apply workspace filter if specified
+        workspace_id = self.request.GET.get('workspace')
+        if workspace_id:
+            base_queryset = base_queryset.filter(task_list__workspace_id=workspace_id)
+
+        # Apply tag filter if specified
+        tag_name = self.request.GET.get('tag')
+        if tag_name:
+            base_queryset = base_queryset.filter(tags__name=tag_name.strip().lower())
+
+        # Use aggregate with Q filters for single-query counts
+        from django.db.models import Count
+        counts = base_queryset.aggregate(
+            active_count=Count('id', filter=Q(status='active')),
+            completed_count=Count('id', filter=Q(status='completed'))
+        )
+
+        counts['all_count'] = counts['active_count'] + counts['completed_count']
+        counts['total_count'] = counts['all_count']  # Alias for template compatibility
+
+        return counts
+
     def get_context_data(self, **kwargs):
-        """Add workspace filter, tag filter, due date counts, and active view to context."""
+        """Add filters, counts, and active view to context."""
         context = super().get_context_data(**kwargs)
+
+        # Get or create user preferences
+        user_prefs, created = UserPreference.objects.get_or_create(user=self.request.user)
+
+        # Get current status filter
+        status_filter = self.request.GET.get('status', user_prefs.default_task_status_filter)
+        context['current_status_filter'] = status_filter
+
+        # Get status counts
+        context.update(self.get_status_counts())
 
         # Get current workspace filter
         workspace_id = self.request.GET.get('workspace')
         if workspace_id:
             context['current_workspace'] = get_object_or_404(Workspace, id=workspace_id, owner=self.request.user)
-
-            # Counts for current workspace
-            context['active_count'] = Task.objects.filter(
-                task_list__workspace=context['current_workspace'],
-                status='active'
-            ).count()
-            context['completed_count'] = Task.objects.filter(
-                task_list__workspace=context['current_workspace'],
-                status='completed'
-            ).count()
-        else:
-            # Counts for all workspaces
-            context['active_count'] = Task.objects.filter(
-                task_list__workspace__owner=self.request.user,
-                status='active'
-            ).count()
-            context['completed_count'] = Task.objects.filter(
-                task_list__workspace__owner=self.request.user,
-                status='completed'
-            ).count()
 
         # Get current tag filter
         tag_name = self.request.GET.get('tag')
@@ -472,6 +563,13 @@ class TaskListView(LoginRequiredMixin, ListView):
 
         context['active_filters'] = active_filters
 
+        # Add archived task count
+        archived_count = Task.objects.filter(
+            task_list__workspace__owner=self.request.user,
+            is_archived=True
+        ).count()
+        context['archived_count'] = archived_count
+
         return context
 
 
@@ -495,4 +593,179 @@ class TaskDetailView(LoginRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         context['workspace'] = self.object.workspace
         context['task_list'] = self.object.task_list
+        return context
+
+
+# ============================================================================
+# Bulk Actions & Archive Views
+# ============================================================================
+
+class TaskListMarkAllCompleteView(LoginRequiredMixin, WorkspaceAccessMixin, View):
+    """
+    View for marking all active tasks in a task list as complete.
+    Uses atomic transaction to ensure data consistency.
+    """
+
+    def dispatch(self, request, *args, **kwargs):
+        """Override to get task list and verify workspace access."""
+        task_list_id = kwargs.get('pk')
+        self.task_list = get_object_or_404(TaskList, id=task_list_id)
+
+        # Verify user owns workspace
+        if self.task_list.workspace.owner != request.user:
+            raise PermissionDenied("You do not have access to this task list.")
+
+        self.workspace = self.task_list.workspace
+        return super(WorkspaceAccessMixin, self).dispatch(request, *args, **kwargs)
+
+    def post(self, request, pk):
+        """Handle POST request to mark all active tasks complete."""
+        # Use transaction for atomicity
+        with transaction.atomic():
+            # Get all active, non-archived tasks in this task list
+            tasks = Task.objects.filter(
+                task_list=self.task_list,
+                status='active',
+                is_archived=False
+            )
+
+            # Count for message
+            task_count = tasks.count()
+
+            # Mark all tasks complete using mark_complete() for each task
+            for task in tasks:
+                task.mark_complete()
+
+        # Return success message
+        messages.success(request, f'{task_count} tasks marked complete')
+
+        # Return empty response with HX-Trigger to refresh list
+        response = HttpResponse('')
+        response['HX-Trigger'] = 'taskListRefresh'
+        return response
+
+
+class TaskArchiveView(LoginRequiredMixin, View):
+    """
+    View for archiving a single task.
+    Sets is_archived=True (soft delete).
+    """
+
+    def post(self, request, pk):
+        """Handle POST request to archive task."""
+        # Get task and verify ownership
+        task = get_object_or_404(
+            Task.objects.select_related('task_list__workspace'),
+            pk=pk,
+            task_list__workspace__owner=request.user
+        )
+
+        # Archive the task
+        task.archive()
+
+        # Return success message
+        messages.success(request, 'Task archived')
+
+        # Return empty response with HX-Trigger to remove task from list
+        response = HttpResponse('')
+        response['HX-Trigger'] = 'taskArchived'
+        return response
+
+
+class TaskUnarchiveView(LoginRequiredMixin, View):
+    """
+    View for unarchiving a single task.
+    Sets is_archived=False to restore task to normal view.
+    """
+
+    def post(self, request, pk):
+        """Handle POST request to unarchive task."""
+        # Get task and verify ownership
+        task = get_object_or_404(
+            Task.objects.select_related('task_list__workspace'),
+            pk=pk,
+            task_list__workspace__owner=request.user
+        )
+
+        # Unarchive the task
+        task.unarchive()
+
+        # Return success message
+        messages.success(request, 'Task restored from archive')
+
+        # Return empty response with HX-Trigger to remove task from archive list
+        response = HttpResponse('')
+        response['HX-Trigger'] = 'taskUnarchived'
+        return response
+
+
+class TaskListArchiveAllCompletedView(LoginRequiredMixin, WorkspaceAccessMixin, View):
+    """
+    View for archiving all completed tasks in a task list.
+    Uses atomic transaction to ensure data consistency.
+    """
+
+    def dispatch(self, request, *args, **kwargs):
+        """Override to get task list and verify workspace access."""
+        task_list_id = kwargs.get('pk')
+        self.task_list = get_object_or_404(TaskList, id=task_list_id)
+
+        # Verify user owns workspace
+        if self.task_list.workspace.owner != request.user:
+            raise PermissionDenied("You do not have access to this task list.")
+
+        self.workspace = self.task_list.workspace
+        return super(WorkspaceAccessMixin, self).dispatch(request, *args, **kwargs)
+
+    def post(self, request, pk):
+        """Handle POST request to archive all completed tasks."""
+        # Use transaction for atomicity
+        with transaction.atomic():
+            # Get all completed, non-archived tasks in this task list
+            tasks = Task.objects.filter(
+                task_list=self.task_list,
+                status='completed',
+                is_archived=False
+            )
+
+            # Count for message
+            task_count = tasks.count()
+
+            # Archive all tasks using update for efficiency
+            tasks.update(is_archived=True)
+
+        # Return success message
+        messages.success(request, f'{task_count} tasks archived')
+
+        # Return empty response with HX-Trigger to refresh list
+        response = HttpResponse('')
+        response['HX-Trigger'] = 'taskListRefresh'
+        return response
+
+
+class ArchivedTaskListView(LoginRequiredMixin, ListView):
+    """
+    View for displaying archived tasks.
+    Shows only tasks where is_archived=True, scoped to user's workspaces.
+    """
+    model = Task
+    template_name = 'tasks/archived_task_list.html'
+    context_object_name = 'tasks'
+    paginate_by = 20
+
+    def get_queryset(self):
+        """Get archived tasks for the user."""
+        return Task.objects.filter(
+            task_list__workspace__owner=self.request.user,
+            is_archived=True
+        ).select_related(
+            'task_list__workspace',
+            'created_by',
+            'task_list'
+        ).prefetch_related('tags').order_by('-completed_at')
+
+    def get_context_data(self, **kwargs):
+        """Add archived count and workspace to context."""
+        context = super().get_context_data(**kwargs)
+        context['archived_count'] = self.get_queryset().count()
         return context

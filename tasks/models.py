@@ -4,6 +4,7 @@ Task models for task management.
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from datetime import date, timedelta
 import re
 
@@ -396,6 +397,19 @@ class Task(models.Model):
         help_text="Specific time for deadline (requires due_date)"
     )
 
+    completed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="When task was marked as completed"
+    )
+
+    is_archived = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Whether task is archived (soft delete)"
+    )
+
     # Tags (many-to-many relationship)
     tags = models.ManyToManyField(
         'Tag',
@@ -431,6 +445,7 @@ class Task(models.Model):
             models.Index(fields=['created_by'], name='task_created_by_idx'),
             models.Index(fields=['-created_at'], name='task_created_at_idx'),
             models.Index(fields=['task_list', 'created_by'], name='task_tasklist_user_idx'),
+            models.Index(fields=['task_list', 'status', 'is_archived'], name='task_list_status_archived_idx'),
         ]
 
         constraints = [
@@ -441,6 +456,14 @@ class Task(models.Model):
             models.CheckConstraint(
                 check=models.Q(status__in=['active', 'completed']),
                 name='valid_status'
+            ),
+            models.CheckConstraint(
+                check=(
+                    models.Q(completed_at__isnull=True, status='active') |
+                    models.Q(completed_at__isnull=False, status='completed') |
+                    models.Q(completed_at__isnull=True, status='completed')
+                ),
+                name='completed_at_requires_completed_status'
             ),
         ]
 
@@ -453,14 +476,26 @@ class Task(models.Model):
         return self.task_list.workspace if self.task_list else None
 
     def mark_complete(self):
-        """Mark task as completed."""
+        """Mark task as completed and set completion timestamp."""
         self.status = 'completed'
-        self.save(update_fields=['status', 'updated_at'])
+        self.completed_at = timezone.now()
+        self.save(update_fields=['status', 'completed_at', 'updated_at'])
 
     def mark_active(self):
-        """Mark task as active (incomplete)."""
+        """Mark task as active (incomplete) and clear completion timestamp."""
         self.status = 'active'
-        self.save(update_fields=['status', 'updated_at'])
+        self.completed_at = None
+        self.save(update_fields=['status', 'completed_at', 'updated_at'])
+
+    def archive(self):
+        """Archive task (soft delete)."""
+        self.is_archived = True
+        self.save(update_fields=['is_archived', 'updated_at'])
+
+    def unarchive(self):
+        """Unarchive task (restore from soft delete)."""
+        self.is_archived = False
+        self.save(update_fields=['is_archived', 'updated_at'])
 
     def is_overdue(self):
         """Check if task is overdue."""

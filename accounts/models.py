@@ -125,7 +125,7 @@ class Workspace(models.Model):
 
 class UserPreference(models.Model):
     """
-    User preferences for timezone, date/time formatting, and week start day.
+    User preferences for timezone, date/time formatting, week start day, and task filtering.
     One-to-one relationship with Django's User model.
     """
     DATE_FORMAT_CHOICES = [
@@ -143,6 +143,12 @@ class UserPreference(models.Model):
         ('Sunday', 'Sunday'),
         ('Monday', 'Monday'),
         ('Saturday', 'Saturday'),
+    ]
+
+    TASK_STATUS_FILTER_CHOICES = [
+        ('active', 'Active'),
+        ('completed', 'Completed'),
+        ('all', 'All'),
     ]
 
     user = models.OneToOneField(
@@ -174,6 +180,12 @@ class UserPreference(models.Model):
         default='Sunday',
         choices=WEEK_START_CHOICES,
         help_text="User's preferred week start day"
+    )
+    default_task_status_filter = models.CharField(
+        max_length=20,
+        default='active',
+        choices=TASK_STATUS_FILTER_CHOICES,
+        help_text="User's default filter for task status (active/completed/all)"
     )
     created_at = models.DateTimeField(
         auto_now_add=True,

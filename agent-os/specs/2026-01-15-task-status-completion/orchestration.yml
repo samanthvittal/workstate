@@ -1,0 +1,21 @@
+task_groups:
+  - name: Database Schema & Migrations
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Status Toggle & Filtering Views
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Bulk Complete & Archive Functionality
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Interactive UI Components & HTMX Integration
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Alpine.js Shortcuts & Integration Testing
+    claude_code_subagent: implementer
+    standards:
+      - all
