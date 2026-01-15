@@ -1,7 +1,7 @@
 # Workstate Implementation Roadmap
 
 **Last Updated:** January 15, 2026
-**Current Status:** T001-T007, T010 Complete (MVP Foundation)
+**Current Status:** T001-T008, T010 Complete (MVP Foundation)
 
 ## Completed Features ✅
 
@@ -57,7 +57,24 @@
 - Combines with workspace and tag filters
 - No database migrations required
 
-**Total Tests Passing:** 88 tests across all features
+### Phase 5: Task Status & Completion (T008)
+**Status:** Complete (23/23 tests passing)
+**Spec:** agent-os/specs/2026-01-15-task-status-completion/
+**Branch:** Merged to main (commit: 5813409)
+
+- Interactive completion checkboxes with HTMX
+- Status filtering (Active/Completed/All) with user preference persistence
+- Keyboard shortcuts ('x' and 'c') for quick completion toggle
+- Completed tasks automatically move to bottom of list
+- Completion timestamps (auto-captured and displayed)
+- "Mark All Complete" bulk action with confirmation
+- Archive functionality (soft delete with separate view)
+- Unarchive capability to restore archived tasks
+- Sidebar counts in "X of Y complete" format
+- Database migrations with proper indexing and constraints
+- Query optimization (NO N+1 queries)
+
+**Total Tests Passing:** 111 tests across all features
 
 ## Next Priority Features
 
@@ -65,22 +82,7 @@ Based on MVP requirements and user workflow, here are the recommended next featu
 
 ### High Priority (P0) - Core Functionality
 
-#### Option A: Task Status & Completion (T008)
-**Rationale:** Currently tasks can be created but status management is basic. This enhances the core workflow.
-
-**Features:**
-- Task completion toggle (checkboxes on cards)
-- Status filtering (active/completed views)
-- Completion timestamps
-- "Mark all complete" bulk action
-- Archive completed tasks
-
-**Complexity:** Low
-**Impact:** High (core user workflow)
-**Dependencies:** None
-**Estimated Time:** 4-6 hours
-
-#### Option B: Task Search (T009)
+#### Task Search (T009)
 **Rationale:** With tags and task lists implemented, search becomes essential for finding tasks quickly.
 
 **Features:**
@@ -94,21 +96,6 @@ Based on MVP requirements and user workflow, here are the recommended next featu
 **Impact:** High (productivity multiplier)
 **Dependencies:** None
 **Estimated Time:** 6-8 hours
-
-#### Option C: Task Due Date Management (T010)
-**Rationale:** Enhance existing due date feature with better organization and reminders.
-
-**Features:**
-- "Today" view (tasks due today)
-- "Upcoming" view (tasks due in next 7 days)
-- "Overdue" view (past due date, active tasks)
-- Due date quick actions ("Today", "Tomorrow", "Next Week")
-- Visual indicators (red for overdue, yellow for today, etc.)
-
-**Complexity:** Low-Medium
-**Impact:** High (time management)
-**Dependencies:** None (enhances existing due date feature)
-**Estimated Time:** 4-6 hours
 
 ### Medium Priority (P1) - Enhanced Functionality
 
@@ -190,25 +177,25 @@ Based on MVP requirements and user workflow, here are the recommended next featu
 
 ## Recommended Next Step
 
-**Recommendation:** Implement **T010: Task Due Date Management** first
+**Recommendation:** Implement **T009: Task Search** next
 
 **Reasoning:**
-1. **Low hanging fruit:** Builds on existing due date feature
-2. **High impact:** Improves time management workflow immediately
-3. **Low complexity:** Mostly view logic and filtering
-4. **Quick win:** Can be completed in 4-6 hours
-5. **User value:** "Today" and "Overdue" views are essential for task management
+1. **High impact:** Essential for findability as task count grows
+2. **Productivity multiplier:** Quick access to any task across all workspaces
+3. **Natural progression:** Complements existing filtering (tags, status, due dates)
+4. **Medium complexity:** Full-text search with PostgreSQL search features
+5. **User value:** Critical for power users with large task collections
 
-After T010, implement:
-1. **T008:** Task Status & Completion (complete the status workflow)
-2. **T009:** Task Search (findability as task count grows)
-3. **T011:** Task Ordering & Moving (organization)
+After T009, implement:
+1. **T011:** Task Ordering & Moving (organization and manual sorting)
+2. **T012:** Task Comments/Activity Log (collaboration)
+3. **T013:** Bulk Task Actions (efficiency)
 
 This sequence builds a complete MVP with all core task management features:
 - ✅ Create tasks (T001-T006)
 - ✅ Organize with tags (T007)
-- ⏭️ Manage due dates (T010)
-- ⏭️ Track completion (T008)
+- ✅ Manage due dates (T010)
+- ✅ Track completion (T008)
 - ⏭️ Find tasks (T009)
 - ⏭️ Reorder tasks (T011)
 
