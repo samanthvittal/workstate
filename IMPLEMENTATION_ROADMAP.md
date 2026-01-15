@@ -1,7 +1,7 @@
 # Workstate Implementation Roadmap
 
-**Last Updated:** January 14, 2026
-**Current Status:** T001-T007 Complete (MVP Foundation)
+**Last Updated:** January 15, 2026
+**Current Status:** T001-T007, T010 Complete (MVP Foundation)
 
 ## Completed Features ✅
 
@@ -42,6 +42,22 @@
 - Color-coded badges
 - Click tags to filter
 - Query optimization
+
+### Phase 4: Task Due Date Management (T010)
+**Status:** Complete (88/88 tests passing - all project tests)
+**Spec:** agent-os/specs/2026-01-14-task-due-date-management/
+**Branch:** Merged to main (commit: 399bc5e)
+
+- Today, Upcoming, Overdue, No Due Date views
+- Quick date actions (Today, Tomorrow, Next Week, Clear)
+- HTMX-powered instant date updates
+- Color-coded due status labels (red/yellow/green/gray)
+- Sidebar navigation with badge counts
+- Customizable upcoming view (7/14/30 days)
+- Combines with workspace and tag filters
+- No database migrations required
+
+**Total Tests Passing:** 88 tests across all features
 
 ## Next Priority Features
 
