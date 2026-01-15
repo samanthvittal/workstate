@@ -1,56 +1,13 @@
 {% load user_filters %}
 <!-- Navigation Bar -->
-<nav class="bg-white shadow-sm border-b border-gray-200" x-data="{ workspaceOpen: false, userMenuOpen: false }">
+<nav class="bg-white shadow-sm border-b border-gray-200" x-data="{ userMenuOpen: false }">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center h-16">
-            <!-- Left: Logo + Workspace Selector -->
-            <div class="flex items-center gap-4">
-                <!-- Logo -->
+            <!-- Left: Logo -->
+            <div class="flex items-center">
                 <a href="{% url 'dashboard' %}" class="text-xl sm:text-2xl font-bold text-gray-900 hover:text-gray-700">
                     Workstate
                 </a>
-
-                <!-- Workspace Selector (Always show dropdown for clarity) -->
-                {% if user.workspaces.exists %}
-                <div class="relative">
-                    <button @click="workspaceOpen = !workspaceOpen"
-                            @click.away="workspaceOpen = false"
-                            class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                        </svg>
-                        <span>{{ current_workspace.name|default:"Select Workspace" }}</span>
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </button>
-
-                    <!-- Workspace Dropdown -->
-                    <div x-show="workspaceOpen"
-                         x-transition:enter="transition ease-out duration-100"
-                         x-transition:enter-start="transform opacity-0 scale-95"
-                         x-transition:enter-end="transform opacity-100 scale-100"
-                         x-transition:leave="transition ease-in duration-75"
-                         x-transition:leave-start="transform opacity-100 scale-100"
-                         x-transition:leave-end="transform opacity-0 scale-95"
-                         class="absolute left-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50"
-                         style="display: none;">
-                        <div class="py-1">
-                            {% for workspace in user.workspaces.all %}
-                            <a href="?workspace={{ workspace.id }}"
-                               class="flex items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                <span>{{ workspace.name }}</span>
-                                {% if workspace.id == current_workspace.id %}
-                                <svg class="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                                </svg>
-                                {% endif %}
-                            </a>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
             </div>
 
             <!-- Right: User Menu -->

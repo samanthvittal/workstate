@@ -6,204 +6,126 @@
 {% block content %}
 {% include "includes/nav.html" %}
 
-<div class="min-h-screen bg-gray-50">
-    <!-- Main Content -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- Task Stats -->
-        {% if current_workspace %}
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <!-- Active Tasks -->
-            <div class="bg-white rounded-lg shadow-sm p-6">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <svg class="h-8 w-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<!-- Two-column layout with sidebar -->
+<div class="flex min-h-screen" x-data="{ sidebarOpen: false }">
+    <!-- LEFT: Sidebar -->
+    {% include "includes/dashboard_sidebar.html" %}
+
+    <!-- RIGHT: Main content -->
+    <div class="flex-1 bg-gray-50 lg:ml-0">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {% if current_workspace %}
+                {% if selected_tasklist %}
+                    <!-- Task List Detail View -->
+                    <div class="mb-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h1 class="text-3xl font-bold text-gray-900">
+                                    {{ selected_tasklist.name }}
+                                </h1>
+                                {% if selected_tasklist.description %}
+                                <p class="text-gray-600 mt-2">{{ selected_tasklist.description }}</p>
+                                {% endif %}
+                                <div class="mt-2 text-sm text-gray-500">
+                                    {{ selected_tasklist.active_count|default:0 }} active · {{ selected_tasklist.completed_count|default:0 }} completed
+                                </div>
+                            </div>
+                            <a href="{% url 'tasks:task-create' tasklist_id=selected_tasklist.id %}"
+                               class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                </svg>
+                                New Task
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Tasks List -->
+                    {% if tasks %}
+                    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                        <ul class="divide-y divide-gray-200">
+                            {% for task in tasks %}
+                                {% include 'tasks/_task_card.html' %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% else %}
+                    <!-- Empty State: No Tasks in List -->
+                    <div class="bg-white rounded-lg shadow-sm p-12 text-center">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                         </svg>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-sm font-medium text-gray-500">Active Tasks</h3>
-                        <p class="text-2xl font-bold text-gray-900">{{ active_tasks }}</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Completed Tasks -->
-            <div class="bg-white rounded-lg shadow-sm p-6">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <svg class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-sm font-medium text-gray-500">Completed</h3>
-                        <p class="text-2xl font-bold text-gray-900">{{ completed_tasks }}</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Task Lists -->
-            <div class="bg-white rounded-lg shadow-sm p-6">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <svg class="h-8 w-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                        </svg>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-sm font-medium text-gray-500">Task Lists</h3>
-                        <p class="text-2xl font-bold text-gray-900">{{ task_lists.count }}</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Task Lists Section -->
-        <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-8">
-            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                <h3 class="text-xl font-semibold text-gray-900">Task Lists</h3>
-                <div class="flex gap-2">
-                    <a href="{% url 'tasks:tasklist-list' workspace_id=current_workspace.id %}"
-                       class="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                        View All
-                    </a>
-                    <span class="text-gray-300">|</span>
-                    <a href="{% url 'tasks:tasklist-create' workspace_id=current_workspace.id %}"
-                       class="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                        + New Task List
-                    </a>
-                </div>
-            </div>
-
-            {% if task_lists %}
-            <div class="divide-y divide-gray-200">
-                {% for task_list in task_lists %}
-                <div class="px-6 py-4 hover:bg-gray-50 transition-colors">
-                    <div class="flex items-center justify-between">
-                        <div class="flex-1">
-                            <a href="{% url 'tasks:tasklist-detail' tasklist_id=task_list.id %}"
-                               class="text-lg font-medium text-gray-900 hover:text-blue-600">
-                                {{ task_list.name }}
+                        <h3 class="mt-2 text-sm font-medium text-gray-900">No tasks in {{ selected_tasklist.name }}</h3>
+                        <p class="mt-1 text-sm text-gray-500">Get started by creating a new task</p>
+                        <div class="mt-6">
+                            <a href="{% url 'tasks:task-create' tasklist_id=selected_tasklist.id %}"
+                               class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                                + New Task
                             </a>
-                            <div class="mt-1 flex items-center gap-4 text-sm text-gray-500">
-                                <span>{{ task_list.active_count|default:0 }} active</span>
-                                <span>{{ task_list.completed_count|default:0 }} completed</span>
-                            </div>
                         </div>
-                        <a href="{% url 'tasks:tasklist-detail' tasklist_id=task_list.id %}"
-                           class="text-sm text-blue-600 hover:text-blue-700">
-                            View →
-                        </a>
                     </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <div class="px-6 py-12 text-center">
-                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                </svg>
-                <h3 class="mt-2 text-sm font-medium text-gray-900">No task lists yet</h3>
-                <p class="mt-1 text-sm text-gray-500">Get started by creating your first task list.</p>
-                <div class="mt-6">
-                    <a href="{% url 'tasks:tasklist-create' workspace_id=current_workspace.id %}"
-                       class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    {% endif %}
+
+                {% else %}
+                    <!-- Workspace Overview (No Task List Selected) -->
+                    <h1 class="text-3xl font-bold text-gray-900 mb-6">
+                        {{ current_workspace.name }}
+                    </h1>
+
+                    <!-- Stats Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <!-- Active Tasks -->
+                        <div class="bg-white rounded-lg shadow-sm p-6">
+                            <div class="text-sm font-medium text-gray-500">Active Tasks</div>
+                            <div class="mt-2 text-3xl font-semibold text-gray-900">{{ active_tasks }}</div>
+                        </div>
+
+                        <!-- Completed Tasks -->
+                        <div class="bg-white rounded-lg shadow-sm p-6">
+                            <div class="text-sm font-medium text-gray-500">Completed Tasks</div>
+                            <div class="mt-2 text-3xl font-semibold text-gray-900">{{ completed_tasks }}</div>
+                        </div>
+
+                        <!-- Task Lists -->
+                        <div class="bg-white rounded-lg shadow-sm p-6">
+                            <div class="text-sm font-medium text-gray-500">Task Lists</div>
+                            <div class="mt-2 text-3xl font-semibold text-gray-900">{{ task_lists.count }}</div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Tasks (All Lists) -->
+                    {% if recent_tasks %}
+                    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                        <div class="px-6 py-4 border-b border-gray-200">
+                            <h3 class="text-lg font-medium text-gray-900">Recent Tasks</h3>
+                        </div>
+                        <ul class="divide-y divide-gray-200">
+                            {% for task in recent_tasks %}
+                                {% include 'tasks/_task_card.html' %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% else %}
+                    <!-- Empty State: No Tasks in Workspace -->
+                    <div class="bg-white rounded-lg shadow-sm p-12 text-center">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                         </svg>
-                        Create your first task list
-                    </a>
-                </div>
-            </div>
-            {% endif %}
-        </div>
-
-        <!-- Recent Tasks Section -->
-        <div class="bg-white rounded-lg shadow-sm overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                <h3 class="text-xl font-semibold text-gray-900">Recent Tasks</h3>
-                <a href="{% url 'tasks:task-list-all' %}?workspace={{ current_workspace.id }}"
-                   class="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                    View All
-                </a>
-            </div>
-
-            {% if recent_tasks %}
-            <ul class="divide-y divide-gray-200">
-                {% for task in recent_tasks %}
-                <li class="hover:bg-gray-50 transition-colors">
-                    <div class="px-6 py-4">
-                        <div class="flex items-start justify-between gap-4">
-                            <!-- Task Info -->
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-center gap-3">
-                                    <!-- Completion Checkbox -->
-                                    <input type="checkbox"
-                                           {% if task.status == 'completed' %}checked{% endif %}
-                                           class="h-4 w-4 text-blue-600 rounded border-gray-300"
-                                           disabled>
-
-                                    <!-- Task Title -->
-                                    <a href="{% url 'tasks:task-detail' pk=task.id %}"
-                                       class="text-base font-medium text-gray-900 hover:text-blue-600 {% if task.status == 'completed' %}line-through text-gray-500{% endif %}">
-                                        {{ task.title }}
-                                    </a>
-
-                                    <!-- Priority Badge -->
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
-                                        {% if task.priority == 'P1' %}bg-red-100 text-red-800
-                                        {% elif task.priority == 'P2' %}bg-orange-100 text-orange-800
-                                        {% elif task.priority == 'P3' %}bg-yellow-100 text-yellow-800
-                                        {% elif task.priority == 'P4' %}bg-blue-100 text-blue-800
-                                        {% endif %}">
-                                        {{ task.get_priority_display }}
-                                    </span>
-                                </div>
-
-                                <!-- Task Meta -->
-                                <div class="mt-1 flex items-center gap-4 text-sm text-gray-500">
-                                    <span>{{ task.task_list.name }}</span>
-                                    {% if task.due_date %}
-                                    <span class="{% if task.is_overdue %}text-red-600 font-medium{% endif %}">
-                                        Due: {{ task.due_date|date:"M d" }}
-                                        {% if task.is_overdue %}(Overdue){% endif %}
-                                    </span>
-                                    {% endif %}
-                                </div>
-                            </div>
-
-                            <!-- Edit Button -->
-                            <button hx-get="{% url 'tasks:task-edit' pk=task.id %}"
-                                    hx-target="#modal"
-                                    hx-swap="innerHTML"
-                                    class="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                                Edit
-                            </button>
-                        </div>
+                        <h3 class="mt-2 text-sm font-medium text-gray-900">No tasks yet</h3>
+                        <p class="mt-1 text-sm text-gray-500">Create a task list first, then add tasks to it</p>
                     </div>
-                </li>
-                {% endfor %}
-            </ul>
+                    {% endif %}
+                {% endif %}
             {% else %}
-            <!-- Empty State -->
-            <div class="px-6 py-12 text-center">
-                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-                <h3 class="mt-2 text-sm font-medium text-gray-900">No tasks yet</h3>
-                <p class="mt-1 text-sm text-gray-500">Create a task list first, then add tasks to it.</p>
-            </div>
+                <!-- No Workspace State -->
+                <div class="bg-white rounded-lg shadow-sm p-12 text-center">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                    </svg>
+                    <p class="mt-2 text-sm text-gray-500">No workspaces found. Please contact support.</p>
+                </div>
             {% endif %}
         </div>
-        {% else %}
-        <!-- No Workspace State -->
-        <div class="bg-white rounded-lg shadow-sm p-12 text-center">
-            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-            </svg>
-            <p class="mt-2 text-sm text-gray-500">No workspaces found. Please contact support.</p>
-        </div>
-        {% endif %}
     </div>
 </div>
 

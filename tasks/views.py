@@ -67,8 +67,8 @@ class TaskListCreateView(LoginRequiredMixin, WorkspaceAccessMixin, CreateView):
     template_name = 'tasks/tasklist_form.html'
 
     def get_success_url(self):
-        """Redirect to workspace task lists after creation."""
-        return reverse('tasks:tasklist-list', kwargs={'workspace_id': self.workspace.id})
+        """Redirect to dashboard with new task list selected."""
+        return f'/dashboard/?workspace={self.workspace.id}&tasklist={self.object.id}'
 
     def form_valid(self, form):
         """Set workspace and created_by before saving task list."""

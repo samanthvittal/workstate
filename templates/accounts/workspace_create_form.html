@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Create Workspace - Workstate{% endblock %}
+
+{% block content %}
+{% include "includes/nav.html" %}
+
+<div class="min-h-screen bg-gray-50 py-12">
+    <div class="max-w-md mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">Create New Workspace</h1>
+            <p class="mt-2 text-sm text-gray-600">Organize your tasks and projects in a dedicated workspace</p>
+        </div>
+
+        <!-- Form Card -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <!-- Display Messages -->
+            {% if messages %}
+            <div class="mb-4">
+                {% for message in messages %}
+                <div class="{% if message.tags == 'error' %}bg-red-50 border-l-4 border-red-400 text-red-800{% elif message.tags == 'success' %}bg-green-50 border-l-4 border-green-400 text-green-800{% else %}bg-blue-50 border-l-4 border-blue-400 text-blue-800{% endif %} px-4 py-3 rounded">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Form -->
+            <form method="post" action="{% url 'accounts:workspace-create' %}">
+                {% csrf_token %}
+
+                <!-- Workspace Name -->
+                <div class="mb-6">
+                    <label for="name" class="block text-sm font-medium text-gray-700 mb-2">
+                        Workspace Name <span class="text-red-600">*</span>
+                    </label>
+                    <input type="text"
+                           name="name"
+                           id="name"
+                           required
+                           maxlength="100"
+                           placeholder="e.g., Personal Projects, Work Tasks"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                           autofocus>
+                    <p class="mt-1 text-xs text-gray-500">
+                        Choose a descriptive name for your workspace (max 100 characters)
+                    </p>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-col-reverse sm:flex-row justify-end gap-3">
+                    <a href="{% url 'dashboard' %}"
+                       class="inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Cancel
+                    </a>
+                    <button type="submit"
+                            class="inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Create Workspace
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Info Box -->
+        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div class="flex">
+                <svg class="w-5 h-5 text-blue-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div class="text-sm text-blue-800">
+                    <p class="font-medium mb-1">What is a workspace?</p>
+                    <p>Workspaces help you organize your tasks by context. For example, you might create separate workspaces for "Personal", "Work", or specific projects.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

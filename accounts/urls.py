@@ -6,6 +6,7 @@ from django.contrib.auth import views as auth_views
 from . import views
 from . import admin_views
 from . import registration_views
+from . import workspace_views
 
 app_name = 'accounts'
 
@@ -25,6 +26,9 @@ urlpatterns = [
     path('profile/', views.profile_view, name='profile'),
     path('profile/edit/', views.profile_update_view, name='profile_edit'),
     path('preferences/', views.preferences_view, name='preferences'),
+
+    # Workspace management URLs
+    path('workspace/create/', workspace_views.workspace_create_view, name='workspace-create'),
 
     # Admin dashboard URLs
     path('admin-dashboard/', admin_views.admin_user_list, name='admin_user_list'),
