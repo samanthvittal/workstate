@@ -7,7 +7,8 @@ from tasks.views import (
     TaskToggleStatusView,
     TaskListCreateView, TaskListListView, TaskListDetailView,
     TaskListMarkAllCompleteView, TaskArchiveView, TaskUnarchiveView, TaskListArchiveAllCompletedView,
-    ArchivedTaskListView
+    ArchivedTaskListView,
+    SearchDropdownView, SearchResultsView, SaveSearchView, DeleteSearchView, ClearSearchHistoryView,
 )
 
 app_name = 'tasks'
@@ -34,4 +35,11 @@ urlpatterns = [
 
     # All tasks view (can be filtered by workspace via query param)
     path('tasks/', TaskListView.as_view(), name='task-list-all'),
+
+    # Search URLs
+    path('search/', SearchResultsView.as_view(), name='search-results'),
+    path('search/dropdown/', SearchDropdownView.as_view(), name='search-dropdown'),
+    path('search/save/', SaveSearchView.as_view(), name='search-save'),
+    path('search/saved/<int:pk>/delete/', DeleteSearchView.as_view(), name='search-delete'),
+    path('search/history/clear/', ClearSearchHistoryView.as_view(), name='search-history-clear'),
 ]

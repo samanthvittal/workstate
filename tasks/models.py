@@ -5,6 +5,9 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from django.contrib.postgres.search import SearchVectorField, SearchQuery, SearchRank
+from django.contrib.postgres.indexes import GinIndex
+from django.db.models import F, Q
 from datetime import date, timedelta
 import re
 
@@ -323,6 +326,126 @@ class TaskManager(models.Manager):
             due_date__isnull=True
         ).order_by('-created_at')
 
+    def search_tasks(self, user, query, filters=None):
+        """
+        Search tasks using full-text search with permission filtering.
+
+        Args:
+            user: User performing the search
+            query: Sanitized search query string (tsquery format)
+            filters: Optional dict with keys: workspace_id, tag_names, status, priority
+
+        Returns:
+            QuerySet of tasks annotated with relevance score, ordered by relevance
+        """
+        from tasks.services import SearchQueryService
+
+        if not query or not query.strip():
+            # Return empty queryset for empty queries
+            return self.none()
+
+        # Sanitize and parse the query
+        tsquery_string = SearchQueryService.parse_search_query(query)
+        if not tsquery_string:
+            return self.none()
+
+        # Create the search query using PostgreSQL to_tsquery
+        search_query = SearchQuery(tsquery_string, search_type='raw', config='english')
+
+        # Base queryset filtered by user's accessible workspaces
+        queryset = self.filter(
+            task_list__workspace__owner=user,
+            is_archived=False
+        ).filter(
+            search_vector=search_query
+        ).select_related(
+            'task_list__workspace',
+            'created_by'
+        ).prefetch_related(
+            'tags'
+        )
+
+        # Annotate with relevance score using ts_rank_cd
+        queryset = queryset.annotate(
+            relevance=SearchRank(F('search_vector'), search_query)
+        )
+
+        # Apply filters if provided
+        if filters:
+            queryset = self._apply_search_filters(queryset, filters, user)
+
+        # Default sort by relevance
+        queryset = queryset.order_by('-relevance', '-created_at')
+
+        return queryset
+
+    def _apply_search_filters(self, queryset, filters, user):
+        """
+        Apply additional filters to search results.
+
+        Args:
+            queryset: QuerySet to filter
+            filters: Dict with filter options
+            user: User performing search (for permission validation)
+
+        Returns:
+            Filtered QuerySet
+        """
+        # Filter by workspace
+        if 'workspace_id' in filters and filters['workspace_id']:
+            # Validate user has access to this workspace
+            queryset = queryset.filter(
+                task_list__workspace_id=filters['workspace_id'],
+                task_list__workspace__owner=user
+            )
+
+        # Filter by tags
+        if 'tag_names' in filters and filters['tag_names']:
+            tag_names = filters['tag_names']
+            if isinstance(tag_names, str):
+                tag_names = [tag_names]
+            queryset = queryset.filter(tags__name__in=tag_names).distinct()
+
+        # Filter by status
+        if 'status' in filters and filters['status']:
+            status = filters['status']
+            if status in ('active', 'completed'):
+                queryset = queryset.filter(status=status)
+            # 'all' or any other value means no status filter
+
+        # Filter by priority
+        if 'priority' in filters and filters['priority']:
+            priorities = filters['priority']
+            if isinstance(priorities, str):
+                priorities = [priorities]
+            # Validate priorities are in valid choices
+            valid_priorities = [p for p in priorities if p in ('P1', 'P2', 'P3', 'P4')]
+            if valid_priorities:
+                queryset = queryset.filter(priority__in=valid_priorities)
+
+        return queryset
+
+    def apply_search_sort(self, queryset, sort_option='relevance'):
+        """
+        Apply sorting to search results queryset.
+
+        Args:
+            queryset: QuerySet to sort (must have 'relevance' annotation)
+            sort_option: Sort option ('relevance', 'due_date', 'priority', 'created_at')
+
+        Returns:
+            Sorted QuerySet
+        """
+        sort_mapping = {
+            'relevance': ['-relevance', '-created_at'],
+            'due_date': ['due_date', '-created_at'],
+            'priority': ['priority', '-created_at'],
+            'created_at': ['-created_at', '-relevance'],
+        }
+
+        sort_fields = sort_mapping.get(sort_option, sort_mapping['relevance'])
+        return queryset.order_by(*sort_fields)
+
 
 class Task(models.Model):
     """
@@ -418,6 +541,13 @@ class Task(models.Model):
         help_text="Tags for categorizing this task"
     )
 
+    # Full-text search vector field
+    search_vector = SearchVectorField(
+        null=True,
+        blank=True,
+        help_text="Full-text search vector for title and description"
+    )
+
     # Timestamps
     created_at = models.DateTimeField(
         auto_now_add=True,
@@ -446,6 +576,7 @@ class Task(models.Model):
             models.Index(fields=['-created_at'], name='task_created_at_idx'),
             models.Index(fields=['task_list', 'created_by'], name='task_tasklist_user_idx'),
             models.Index(fields=['task_list', 'status', 'is_archived'], name='task_list_status_archived_idx'),
+            GinIndex(fields=['search_vector'], name='task_search_vector_idx'),
         ]
 
         constraints = [
@@ -556,6 +687,49 @@ class Task(models.Model):
         }
         return colors.get(status, 'gray')
 
+    def get_search_snippet(self, query, max_length=150):
+        """
+        Generate a search snippet with highlighted terms using PostgreSQL ts_headline.
+
+        Args:
+            query: Search query string
+            max_length: Maximum length of snippet in characters
+
+        Returns:
+            String with highlighted search terms wrapped in <mark> tags
+        """
+        from django.db import connection
+        from tasks.services import SearchQueryService
+
+        # Sanitize query
+        tsquery_string = SearchQueryService.parse_search_query(query)
+        if not tsquery_string:
+            # Fallback to truncated description
+            if self.description:
+                return self.description[:max_length] + ('...' if len(self.description) > max_length else '')
+            return self.title
+
+        # Use ts_headline to generate snippet
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT ts_headline('english', %s, to_tsquery('english', %s),
+                    'MaxWords=20, MinWords=10, ShortWord=3, HighlightAll=FALSE,
+                     StartSel=<mark>, StopSel=</mark>')
+                """,
+                [self.description or self.title, tsquery_string]
+            )
+            result = cursor.fetchone()
+            if result and result[0]:
+                snippet = result[0]
+                # Limit length if necessary
+                if len(snippet) > max_length:
+                    snippet = snippet[:max_length] + '...'
+                return snippet
+
+        # Fallback
+        return self.description[:max_length] if self.description else self.title
+
     def clean(self):
         """Model validation."""
         # If due_time is set, due_date must also be set
@@ -569,3 +743,182 @@ class Task(models.Model):
             raise ValidationError({
                 'title': 'Title cannot be empty or only whitespace.'
             })
+
+
+class SearchHistoryManager(models.Manager):
+    """Custom manager for SearchHistory queries."""
+
+    def get_recent_for_user(self, user, limit=10):
+        """
+        Get recent search history for a user.
+
+        Args:
+            user: User object
+            limit: Maximum number of searches to return
+
+        Returns:
+            QuerySet of recent searches ordered by searched_at descending
+        """
+        return self.filter(user=user).order_by('-searched_at')[:limit]
+
+    def prune_old_searches(self, user, keep_count=50):
+        """
+        Prune old search history for a user, keeping only the most recent entries.
+
+        Args:
+            user: User object
+            keep_count: Number of most recent searches to keep (default: 50)
+        """
+        searches = self.filter(user=user).order_by('-searched_at')
+        total_count = searches.count()
+
+        if total_count > keep_count:
+            # Get the IDs of searches to delete
+            searches_to_delete = searches[keep_count:]
+            delete_ids = list(searches_to_delete.values_list('id', flat=True))
+
+            # Delete old searches
+            self.filter(id__in=delete_ids).delete()
+
+
+class SearchHistory(models.Model):
+    """
+    Search history model for tracking user search queries.
+
+    Stores user search queries with result counts and timestamps
+    for displaying recent searches and analytics.
+    """
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='search_history',
+        help_text="User who performed the search"
+    )
+
+    query = models.CharField(
+        max_length=255,
+        help_text="Search query string"
+    )
+
+    result_count = models.IntegerField(
+        default=0,
+        help_text="Number of results returned for this search"
+    )
+
+    searched_at = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+        help_text="When the search was performed"
+    )
+
+    # Custom manager
+    objects = SearchHistoryManager()
+
+    class Meta:
+        db_table = 'search_history'
+        verbose_name = 'Search History'
+        verbose_name_plural = 'Search Histories'
+        ordering = ['-searched_at']
+
+        indexes = [
+            models.Index(fields=['user'], name='search_history_user_idx'),
+            models.Index(fields=['user', '-searched_at'], name='search_history_user_date_idx'),
+        ]
+
+    def __str__(self):
+        return f"{self.user.email}: {self.query} ({self.result_count} results)"
+
+
+class SavedSearchManager(models.Manager):
+    """Custom manager for SavedSearch queries."""
+
+    def for_user(self, user):
+        """Return saved searches for a specific user."""
+        return self.filter(user=user).order_by('-created_at')
+
+
+class SavedSearch(models.Model):
+    """
+    Saved search model for storing user's frequently used searches.
+
+    Stores search queries with filter configurations to allow users
+    to quickly re-execute complex searches.
+    """
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='saved_searches',
+        help_text="User who saved this search"
+    )
+
+    name = models.CharField(
+        max_length=100,
+        help_text="Name for this saved search"
+    )
+
+    query = models.TextField(
+        help_text="Search query string"
+    )
+
+    filters = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Filter configuration (workspace_id, tag_names, status, priority, date_range)"
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When the search was saved"
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        help_text="When the search was last updated"
+    )
+
+    # Custom manager
+    objects = SavedSearchManager()
+
+    class Meta:
+        db_table = 'saved_searches'
+        verbose_name = 'Saved Search'
+        verbose_name_plural = 'Saved Searches'
+        ordering = ['-created_at']
+
+        indexes = [
+            models.Index(fields=['user'], name='saved_search_user_idx'),
+            models.Index(fields=['user', 'name'], name='saved_search_user_name_idx'),
+        ]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'name'],
+                name='unique_saved_search_name_per_user'
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.user.email}: {self.name}"
+
+    def clean(self):
+        """Model validation."""
+        # Name must not be empty or only whitespace
+        if self.name and not self.name.strip():
+            raise ValidationError({
+                'name': 'Name cannot be empty or only whitespace.'
+            })
+
+        # Validate user has not exceeded 20 saved searches
+        if not self.pk:  # Only check on creation
+            existing_count = SavedSearch.objects.filter(user=self.user).count()
+            if existing_count >= 20:
+                raise ValidationError({
+                    'user': 'Cannot save more than 20 searches. Please delete an existing search first.'
+                })
+
+    def save(self, *args, **kwargs):
+        """Override save to ensure clean() is called."""
+        self.full_clean()
+        super().save(*args, **kwargs)

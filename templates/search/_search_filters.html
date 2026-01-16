@@ -1,0 +1,156 @@
+<!-- Search Filters Sidebar -->
+<div class="bg-white rounded-lg shadow-sm p-4 space-y-6">
+    <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wider">
+        Filters
+    </h3>
+
+    <!-- Status Filter -->
+    <div>
+        <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+            Status
+        </h4>
+        <div class="space-y-2">
+            <label class="flex items-center">
+                <input type="radio"
+                       name="status"
+                       value="active"
+                       {% if status_filter == 'active' or not status_filter %}checked{% endif %}
+                       onchange="window.location.href='?q={{ query }}&status=active{% if sort %}&sort={{ sort }}{% endif %}{% if workspace_filter %}&workspace={{ workspace_filter }}{% endif %}{% for p in priority_filters %}&priority={{ p }}{% endfor %}'"
+                       class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300">
+                <span class="ml-2 text-sm text-gray-700">Active</span>
+            </label>
+            <label class="flex items-center">
+                <input type="radio"
+                       name="status"
+                       value="completed"
+                       {% if status_filter == 'completed' %}checked{% endif %}
+                       onchange="window.location.href='?q={{ query }}&status=completed{% if sort %}&sort={{ sort }}{% endif %}{% if workspace_filter %}&workspace={{ workspace_filter }}{% endif %}{% for p in priority_filters %}&priority={{ p }}{% endfor %}'"
+                       class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300">
+                <span class="ml-2 text-sm text-gray-700">Completed</span>
+            </label>
+            <label class="flex items-center">
+                <input type="radio"
+                       name="status"
+                       value="all"
+                       {% if status_filter == 'all' %}checked{% endif %}
+                       onchange="window.location.href='?q={{ query }}&status=all{% if sort %}&sort={{ sort }}{% endif %}{% if workspace_filter %}&workspace={{ workspace_filter }}{% endif %}{% for p in priority_filters %}&priority={{ p }}{% endfor %}'"
+                       class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300">
+                <span class="ml-2 text-sm text-gray-700">All</span>
+            </label>
+        </div>
+    </div>
+
+    <div class="border-t border-gray-200"></div>
+
+    <!-- Priority Filter -->
+    <div x-data="{ priorities: {{ priority_filters|default:'[]'|safe }} }">
+        <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+            Priority
+        </h4>
+        <div class="space-y-2">
+            <label class="flex items-center">
+                <input type="checkbox"
+                       name="priority"
+                       value="P1"
+                       {% if 'P1' in priority_filters %}checked{% endif %}
+                       @change="
+                           let url = new URL(window.location);
+                           url.searchParams.delete('priority');
+                           document.querySelectorAll('input[name=priority]:checked').forEach(cb => {
+                               url.searchParams.append('priority', cb.value);
+                           });
+                           window.location.href = url.toString();
+                       "
+                       class="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded">
+                <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                    P1 - Urgent
+                </span>
+            </label>
+            <label class="flex items-center">
+                <input type="checkbox"
+                       name="priority"
+                       value="P2"
+                       {% if 'P2' in priority_filters %}checked{% endif %}
+                       @change="
+                           let url = new URL(window.location);
+                           url.searchParams.delete('priority');
+                           document.querySelectorAll('input[name=priority]:checked').forEach(cb => {
+                               url.searchParams.append('priority', cb.value);
+                           });
+                           window.location.href = url.toString();
+                       "
+                       class="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded">
+                <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                    P2 - High
+                </span>
+            </label>
+            <label class="flex items-center">
+                <input type="checkbox"
+                       name="priority"
+                       value="P3"
+                       {% if 'P3' in priority_filters %}checked{% endif %}
+                       @change="
+                           let url = new URL(window.location);
+                           url.searchParams.delete('priority');
+                           document.querySelectorAll('input[name=priority]:checked').forEach(cb => {
+                               url.searchParams.append('priority', cb.value);
+                           });
+                           window.location.href = url.toString();
+                       "
+                       class="h-4 w-4 text-yellow-600 focus:ring-yellow-500 border-gray-300 rounded">
+                <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                    P3 - Medium
+                </span>
+            </label>
+            <label class="flex items-center">
+                <input type="checkbox"
+                       name="priority"
+                       value="P4"
+                       {% if 'P4' in priority_filters %}checked{% endif %}
+                       @change="
+                           let url = new URL(window.location);
+                           url.searchParams.delete('priority');
+                           document.querySelectorAll('input[name=priority]:checked').forEach(cb => {
+                               url.searchParams.append('priority', cb.value);
+                           });
+                           window.location.href = url.toString();
+                       "
+                       class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    P4 - Low
+                </span>
+            </label>
+        </div>
+    </div>
+
+    <div class="border-t border-gray-200"></div>
+
+    <!-- Workspace Filter -->
+    {% if user_workspaces %}
+    <div>
+        <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+            Workspace
+        </h4>
+        <select name="workspace"
+                onchange="window.location.href='?q={{ query }}&workspace=' + this.value + '{% if sort %}&sort={{ sort }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% for p in priority_filters %}&priority={{ p }}{% endfor %}'"
+                class="mt-1 block w-full pl-3 pr-10 py-2 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
+            <option value="">All Workspaces</option>
+            {% for workspace in user_workspaces %}
+            <option value="{{ workspace.id }}" {% if workspace_filter|stringformat:"s" == workspace.id|stringformat:"s" %}selected{% endif %}>
+                {{ workspace.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
+
+    <!-- Clear Filters -->
+    {% if status_filter != 'all' or priority_filters or workspace_filter %}
+    <div class="pt-4 border-t border-gray-200">
+        <a href="{% url 'tasks:search-results' %}?q={{ query }}{% if sort %}&sort={{ sort }}{% endif %}"
+           class="block w-full text-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            Clear All Filters
+        </a>
+    </div>
+    {% endif %}
+</div>

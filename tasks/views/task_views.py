@@ -218,7 +218,7 @@ class TaskUpdateView(LoginRequiredMixin, UpdateView):
     """
     model = Task
     form_class = TaskForm
-    template_name = 'tasks/task_edit_form.html'
+    template_name = 'tasks/task_edit.html'
 
     def get_queryset(self):
         """Filter tasks to only those in workspaces owned by the user."""
@@ -227,8 +227,50 @@ class TaskUpdateView(LoginRequiredMixin, UpdateView):
         ).select_related('task_list__workspace', 'created_by')
 
     def get_success_url(self):
-        """Redirect to task list detail."""
-        return reverse('tasks:tasklist-detail', kwargs={'tasklist_id': self.object.task_list.id})
+        """Redirect to task detail page."""
+        return reverse('tasks:task-detail', kwargs={'pk': self.object.id})
+
+    def get_context_data(self, **kwargs):
+        """Add task list and workspace to context."""
+        context = super().get_context_data(**kwargs)
+        context['task'] = self.object
+        context['task_list'] = self.object.task_list
+        context['workspace'] = self.object.task_list.workspace
+        context['form_action'] = reverse('tasks:task-edit', kwargs={'pk': self.object.id})
+
+        # Add sidebar counts (required by task_sidebar.html)
+        from django.db.models import Q, Count
+        from django.utils import timezone
+
+        workspace = self.object.task_list.workspace
+        today = timezone.now().date()
+
+        # Get task counts for sidebar
+        tasks = Task.objects.filter(
+            task_list__workspace=workspace,
+            is_archived=False
+        )
+
+        context['total_count'] = tasks.count()
+        context['active_count'] = tasks.filter(status='active').count()
+        context['completed_count'] = tasks.filter(status='completed').count()
+
+        # Due date counts
+        context['today_count'] = tasks.filter(due_date=today).count()
+        context['today_completed_count'] = tasks.filter(due_date=today, status='completed').count()
+
+        context['upcoming_count'] = tasks.filter(due_date__gt=today).count()
+        context['upcoming_completed_count'] = tasks.filter(due_date__gt=today, status='completed').count()
+
+        context['overdue_count'] = tasks.filter(due_date__lt=today, status='active').count()
+        context['overdue_completed_count'] = 0
+
+        context['archived_count'] = Task.objects.filter(
+            task_list__workspace=workspace,
+            is_archived=True
+        ).count()
+
+        return context
 
     def form_valid(self, form):
         """
@@ -593,6 +635,39 @@ class TaskDetailView(LoginRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         context['workspace'] = self.object.workspace
         context['task_list'] = self.object.task_list
+
+        # Add sidebar counts (required by task_sidebar.html)
+        from django.db.models import Q, Count
+        from django.utils import timezone
+
+        workspace = self.object.task_list.workspace
+        today = timezone.now().date()
+
+        # Get task counts for sidebar
+        tasks = Task.objects.filter(
+            task_list__workspace=workspace,
+            is_archived=False
+        )
+
+        context['total_count'] = tasks.count()
+        context['active_count'] = tasks.filter(status='active').count()
+        context['completed_count'] = tasks.filter(status='completed').count()
+
+        # Due date counts
+        context['today_count'] = tasks.filter(due_date=today).count()
+        context['today_completed_count'] = tasks.filter(due_date=today, status='completed').count()
+
+        context['upcoming_count'] = tasks.filter(due_date__gt=today).count()
+        context['upcoming_completed_count'] = tasks.filter(due_date__gt=today, status='completed').count()
+
+        context['overdue_count'] = tasks.filter(due_date__lt=today, status='active').count()
+        context['overdue_completed_count'] = 0
+
+        context['archived_count'] = Task.objects.filter(
+            task_list__workspace=workspace,
+            is_archived=True
+        ).count()
+
         return context
 
 
