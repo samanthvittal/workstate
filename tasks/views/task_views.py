@@ -311,27 +311,7 @@ class TaskUpdateView(LoginRequiredMixin, UpdateView):
 
         messages.success(self.request, 'Task updated successfully!')
 
-        # For HTMX requests, add HX-Trigger header to close modal
-        if self.request.headers.get('HX-Request'):
-            response['HX-Trigger'] = 'taskUpdated'
-
         return response
-
-    def get_template_names(self):
-        """Return partial template for HTMX requests."""
-        if self.request.headers.get('HX-Request'):
-            return ['tasks/task_edit_form.html']
-        return ['tasks/task_edit_form.html']
-
-    def get_context_data(self, **kwargs):
-        """Add task and form action URL to context."""
-        context = super().get_context_data(**kwargs)
-        context['task'] = self.object
-        context['task_list'] = self.object.task_list
-        context['workspace'] = self.object.workspace
-        context['form_action'] = reverse('tasks:task-edit', kwargs={'pk': self.object.pk})
-        context['cancel_url'] = reverse('tasks:tasklist-detail', kwargs={'tasklist_id': self.object.task_list.id})
-        return context
 
 
 class TaskToggleStatusView(LoginRequiredMixin, View):
