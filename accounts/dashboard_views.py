@@ -42,8 +42,8 @@ def dashboard_view(request):
     task_lists = TaskList.objects.filter(
         workspace=current_workspace
     ).annotate(
-        active_count=Count('tasks', filter=Q(tasks__status='active')),
-        completed_count=Count('tasks', filter=Q(tasks__status='completed'))
+        active_count=Count('tasks', filter=Q(tasks__status='active', tasks__is_archived=False)),
+        completed_count=Count('tasks', filter=Q(tasks__status='completed', tasks__is_archived=False))
     ).order_by('-created_at')
 
     # Get selected task list
@@ -65,7 +65,8 @@ def dashboard_view(request):
     # Query 4: Fetch tasks with related data if task list selected
     if selected_tasklist:
         tasks = Task.objects.filter(
-            task_list=selected_tasklist
+            task_list=selected_tasklist,
+            is_archived=False
         ).select_related(
             'created_by',
             'task_list',
@@ -76,7 +77,8 @@ def dashboard_view(request):
 
     # Query 5: Workspace-level stats (single aggregation query)
     workspace_stats = Task.objects.filter(
-        task_list__workspace=current_workspace
+        task_list__workspace=current_workspace,
+        is_archived=False
     ).aggregate(
         active_count=Count('id', filter=Q(status='active')),
         completed_count=Count('id', filter=Q(status='completed'))
@@ -84,7 +86,8 @@ def dashboard_view(request):
 
     # Query 6: Recent tasks for overview mode (limit 10, optimized)
     recent_tasks = Task.objects.filter(
-        task_list__workspace=current_workspace
+        task_list__workspace=current_workspace,
+        is_archived=False
     ).select_related(
         'task_list',
         'created_by'

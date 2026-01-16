@@ -18,25 +18,61 @@
                 {% if selected_tasklist %}
                     <!-- Task List Detail View -->
                     <div class="mb-6">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <h1 class="text-3xl font-bold text-gray-900">
-                                    {{ selected_tasklist.name }}
-                                </h1>
-                                {% if selected_tasklist.description %}
-                                <p class="text-gray-600 mt-2">{{ selected_tasklist.description }}</p>
-                                {% endif %}
-                                <div class="mt-2 text-sm text-gray-500">
-                                    {{ selected_tasklist.active_count|default:0 }} active · {{ selected_tasklist.completed_count|default:0 }} completed
+                        <div class="flex flex-col gap-4">
+                            <!-- Header -->
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h1 class="text-3xl font-bold text-gray-900">
+                                        {{ selected_tasklist.name }}
+                                    </h1>
+                                    {% if selected_tasklist.description %}
+                                    <p class="text-gray-600 mt-2">{{ selected_tasklist.description }}</p>
+                                    {% endif %}
+                                    <div class="mt-2 text-sm text-gray-500">
+                                        {{ selected_tasklist.active_count|default:0 }} active · {{ selected_tasklist.completed_count|default:0 }} completed
+                                    </div>
                                 </div>
                             </div>
-                            <a href="{% url 'tasks:task-create' tasklist_id=selected_tasklist.id %}"
-                               class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                                </svg>
-                                New Task
-                            </a>
+
+                            <!-- Action Buttons -->
+                            <div class="flex flex-col sm:flex-row gap-2">
+                                <!-- Mark All Complete Button -->
+                                {% if selected_tasklist.active_count > 0 %}
+                                <button hx-post="{% url 'tasks:mark-all-complete' pk=selected_tasklist.id %}"
+                                        hx-confirm="Mark all {{ selected_tasklist.active_count }} active task{{ selected_tasklist.active_count|pluralize }} in this list as complete?"
+                                        hx-trigger="click"
+                                        hx-swap="none"
+                                        class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 w-full sm:w-auto">
+                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Mark All Complete
+                                </button>
+                                {% endif %}
+
+                                <!-- Archive All Completed Button -->
+                                {% if selected_tasklist.completed_count > 0 %}
+                                <button hx-post="{% url 'tasks:archive-all-completed' pk=selected_tasklist.id %}"
+                                        hx-confirm="Archive all {{ selected_tasklist.completed_count }} completed task{{ selected_tasklist.completed_count|pluralize }}?"
+                                        hx-trigger="click"
+                                        hx-swap="none"
+                                        class="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 w-full sm:w-auto">
+                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                                    </svg>
+                                    Archive All Completed
+                                </button>
+                                {% endif %}
+
+                                <!-- New Task Button -->
+                                <a href="{% url 'tasks:task-create' tasklist_id=selected_tasklist.id %}"
+                                   class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 w-full sm:w-auto">
+                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                    </svg>
+                                    New Task
+                                </a>
+                            </div>
                         </div>
                     </div>
 

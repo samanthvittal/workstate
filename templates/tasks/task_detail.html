@@ -15,7 +15,7 @@
         <div class="container mx-auto px-4 py-8 max-w-4xl">
     <!-- Back Button -->
     <div class="mb-4">
-        <a href="{% url 'tasks:tasklist-detail' tasklist_id=task_list.id %}"
+        <a href="/dashboard/?workspace={{ workspace.id }}&tasklist={{ task_list.id }}"
            class="inline-flex items-center text-sm text-gray-600 hover:text-gray-900">
             <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -157,7 +157,7 @@
 
         <!-- Actions Footer -->
         <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
-            <a href="{% url 'tasks:tasklist-detail' tasklist_id=task_list.id %}"
+            <a href="/dashboard/?workspace={{ workspace.id }}&tasklist={{ task_list.id }}"
                class="text-sm text-gray-600 hover:text-gray-900">
                 ← Back to {{ task_list.name }}
             </a>
