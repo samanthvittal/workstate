@@ -1,17 +1,69 @@
 {% load user_filters %}
 <!-- Navigation Bar -->
-<nav class="bg-white shadow-sm border-b border-gray-200" x-data="{ userMenuOpen: false }">
+<nav class="bg-white shadow-sm border-b border-gray-200" x-data="{ userMenuOpen: false, searchDropdownOpen: false }">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center h-16">
+        <div class="flex justify-between items-center h-16 gap-4">
             <!-- Left: Logo -->
-            <div class="flex items-center">
+            <div class="flex items-center flex-shrink-0">
                 <a href="{% url 'dashboard' %}" class="text-xl sm:text-2xl font-bold text-gray-900 hover:text-gray-700">
                     Workstate
                 </a>
             </div>
 
+            <!-- Center: Search Input (hidden on mobile, visible on tablet+) -->
+            <div class="hidden md:flex flex-1 max-w-md mx-4 relative">
+                <div class="relative w-full"
+                     x-data="{ query: '', debounceTimeout: null }"
+                     @click.away="searchDropdownOpen = false">
+                    <!-- Search Icon -->
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+
+                    <!-- Search Input -->
+                    <input type="search"
+                           name="q"
+                           placeholder="Search tasks..."
+                           class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                           x-model="query"
+                           hx-get="{% url 'tasks:search-dropdown' %}"
+                           hx-trigger="keyup changed delay:300ms"
+                           hx-target="#search-dropdown-results"
+                           x-bind:hx-vals="JSON.stringify({q: query})"
+                           hx-indicator="#search-loading"
+                           @focus="if (query.length > 0) searchDropdownOpen = true"
+                           @keyup.escape="searchDropdownOpen = false; query = ''"
+                           @keyup.enter.prevent="if (query.length > 0) { window.location.href = '{% url 'tasks:search-results' %}?q=' + encodeURIComponent(query); }"
+                           aria-label="Search tasks">
+
+                    <!-- Search Dropdown -->
+                    <div id="search-dropdown-results"
+                         class="absolute top-full left-0 right-0 mt-2 bg-white rounded-md shadow-lg border border-gray-200 z-50"
+                         x-show="searchDropdownOpen && query.length > 0"
+                         x-transition:enter="transition ease-out duration-100"
+                         x-transition:enter-start="transform opacity-0 scale-95"
+                         x-transition:enter-end="transform opacity-100 scale-100"
+                         x-transition:leave="transition ease-in duration-75"
+                         x-transition:leave-start="transform opacity-100 scale-100"
+                         x-transition:leave-end="transform opacity-0 scale-95"
+                         style="display: none;">
+                        <!-- Results loaded via HTMX -->
+                    </div>
+
+                    <!-- Loading Indicator -->
+                    <div id="search-loading" class="absolute inset-y-0 right-0 pr-3 flex items-center htmx-indicator">
+                        <svg class="animate-spin h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
             <!-- Right: User Menu -->
-            <div class="relative">
+            <div class="relative flex-shrink-0">
                 <button @click="userMenuOpen = !userMenuOpen"
                         @click.away="userMenuOpen = false"
                         class="flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md">
@@ -86,5 +138,56 @@
                 </div>
             </div>
         </div>
+
+        <!-- Mobile Search (full width below nav on mobile) -->
+        <div class="md:hidden pb-3">
+            <div class="relative"
+                 x-data="{ mobileQuery: '', mobileSearchOpen: false }"
+                 @click.away="mobileSearchOpen = false">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                    <input type="search"
+                           name="q"
+                           placeholder="Search tasks..."
+                           class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                           x-model="mobileQuery"
+                           hx-get="{% url 'tasks:search-dropdown' %}"
+                           hx-trigger="keyup changed delay:300ms"
+                           hx-target="#mobile-search-dropdown-results"
+                           x-bind:hx-vals="JSON.stringify({q: mobileQuery})"
+                           @focus="if (mobileQuery.length > 0) mobileSearchOpen = true"
+                           @keyup.escape="mobileSearchOpen = false; mobileQuery = ''"
+                           @keyup.enter.prevent="if (mobileQuery.length > 0) { window.location.href = '{% url 'tasks:search-results' %}?q=' + encodeURIComponent(mobileQuery); }"
+                           aria-label="Search tasks">
+                </div>
+                <div id="mobile-search-dropdown-results"
+                     class="absolute top-full left-0 right-0 mt-2 bg-white rounded-md shadow-lg border border-gray-200 z-50"
+                     x-show="mobileSearchOpen && mobileQuery.length > 0"
+                     x-transition
+                     style="display: none;">
+                    <!-- Results loaded via HTMX -->
+                </div>
+            </div>
+        </div>
     </div>
 </nav>
+
+<script>
+    // Enable search dropdown to show after HTMX request completes
+    document.body.addEventListener('htmx:afterSwap', function(event) {
+        if (event.detail.target.id === 'search-dropdown-results' || event.detail.target.id === 'mobile-search-dropdown-results') {
+            const parentDiv = event.detail.target.closest('[x-data]');
+            if (parentDiv) {
+                if (event.detail.target.id === 'search-dropdown-results') {
+                    parentDiv.__x.$data.searchDropdownOpen = true;
+                } else {
+                    parentDiv.__x.$data.mobileSearchOpen = true;
+                }
+            }
+        }
+    });
+</script>
