@@ -52,12 +52,13 @@ def dashboard_view(request):
     tasks = []
 
     if tasklist_id:
-        # User selected specific task list (0-1 queries)
-        selected_tasklist = get_object_or_404(
-            TaskList,
-            id=tasklist_id,
-            workspace=current_workspace
-        )
+        # User selected specific task list - get from annotated queryset to preserve counts
+        try:
+            selected_tasklist = task_lists.get(id=tasklist_id)
+        except TaskList.DoesNotExist:
+            # If not found in this workspace, return 404
+            from django.http import Http404
+            raise Http404("Task list not found")
     elif task_lists.exists():
         # Auto-select first task list (0 queries - from queryset)
         selected_tasklist = task_lists.first()
