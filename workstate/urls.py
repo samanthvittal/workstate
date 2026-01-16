@@ -19,6 +19,7 @@ urlpatterns = [
     path('accounts/', include('accounts.urls')),
     path('accounts/', include('allauth.urls')),
     path('', include('tasks.urls')),
+    path('', include('time_tracking.urls')),
 ]
 
 if settings.DEBUG:

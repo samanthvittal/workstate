@@ -15,6 +15,7 @@ from django.views.generic import CreateView, UpdateView, ListView, DetailView
 from datetime import date, timedelta
 
 from accounts.models import Workspace, UserPreference
+from accounts.mixins import WorkspaceContextMixin
 from tasks.forms import TaskForm, TaskListForm
 from tasks.models import Task, TaskList, Tag
 
@@ -116,9 +117,10 @@ class TaskListListView(LoginRequiredMixin, WorkspaceAccessMixin, ListView):
         return context
 
 
-class TaskListDetailView(LoginRequiredMixin, DetailView):
+class TaskListDetailView(LoginRequiredMixin, WorkspaceContextMixin, DetailView):
     """
     View for displaying a single task list with all its tasks.
+    Includes workspace context for sidebar navigation.
     """
     model = TaskList
     template_name = 'tasks/tasklist_detail.html'
@@ -132,8 +134,11 @@ class TaskListDetailView(LoginRequiredMixin, DetailView):
         ).prefetch_related('tasks').select_related('workspace', 'created_by')
 
     def get_context_data(self, **kwargs):
-        """Add workspace and tasks to context."""
+        """Add workspace context from mixin and task list specific data."""
+        # WorkspaceContextMixin automatically adds workspace context via super()
         context = super().get_context_data(**kwargs)
+
+        # Add task list specific context
         context['workspace'] = self.object.workspace
         context['tasks'] = self.object.tasks.filter(is_archived=False).select_related('created_by').prefetch_related('tags').annotate(
             sort_order=Case(

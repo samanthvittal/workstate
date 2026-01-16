@@ -18,6 +18,7 @@ ALLOWED_HOSTS = []
 
 # Application definition
 INSTALLED_APPS = [
+    'daphne',  # Must be first for ASGI support
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -27,6 +28,7 @@ INSTALLED_APPS = [
     'django.contrib.sites',
 
     # Third-party apps
+    'channels',  # Django Channels for WebSocket support
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
@@ -34,6 +36,7 @@ INSTALLED_APPS = [
     # Local apps
     'accounts.apps.AccountsConfig',
     'tasks.apps.TasksConfig',
+    'time_tracking.apps.TimeTrackingConfig',
 ]
 
 MIDDLEWARE = [
@@ -67,6 +70,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'workstate.wsgi.application'
+ASGI_APPLICATION = 'workstate.asgi.application'
 
 # Database
 DATABASES = {
@@ -79,6 +83,59 @@ DATABASES = {
         'PORT': os.getenv('DB_PORT', '5432'),
         'ATOMIC_REQUESTS': True,
     }
+}
+
+# Redis Cache Configuration
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/1'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'SOCKET_CONNECT_TIMEOUT': 5,
+            'SOCKET_TIMEOUT': 5,
+            'RETRY_ON_TIMEOUT': True,
+            'CONNECTION_POOL_KWARGS': {
+                'max_connections': 50,
+                'retry_on_timeout': True,
+            },
+        },
+        'KEY_PREFIX': 'workstate',
+        'TIMEOUT': 300,  # Default cache timeout in seconds (5 minutes)
+    }
+}
+
+# Django Channels Configuration
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/2')],
+            'capacity': 1500,  # Maximum messages per channel
+            'expiry': 10,  # Message expiry in seconds
+        },
+    },
+}
+
+# Celery Configuration
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://127.0.0.1:6379/0')
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://127.0.0.1:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+CELERY_ENABLE_UTC = True
+
+# Celery Beat Schedule for periodic tasks
+CELERY_BEAT_SCHEDULE = {
+    'sync-active-timers': {
+        'task': 'time_tracking.sync_active_timers',
+        'schedule': 60.0,  # Every 60 seconds
+    },
+    'check-idle-timers': {
+        'task': 'time_tracking.check_idle_timers',
+        'schedule': 60.0,  # Every 60 seconds
+    },
 }
 
 # Password validation

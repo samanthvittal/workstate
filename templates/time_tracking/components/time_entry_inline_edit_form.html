@@ -1,0 +1,155 @@
+<!-- Inline Edit Form for Time Entry (Modal Version) -->
+<form method="post"
+      action="{% url 'time_tracking:time-entry-edit' entry_id=time_entry.id %}"
+      hx-post="{% url 'time_tracking:time-entry-edit' entry_id=time_entry.id %}"
+      hx-target="#time-entry-row-{{ time_entry.id }}"
+      hx-swap="outerHTML"
+      @htmx:after-request.window="if($event.detail.successful) { showModal = false; }"
+      x-data="timeEntryInlineForm()"
+      x-init="init()"
+      class="space-y-4">
+    {% csrf_token %}
+
+    <!-- Non-field errors -->
+    {% if form.non_field_errors %}
+    <div class="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
+        {{ form.non_field_errors }}
+    </div>
+    {% endif %}
+
+    <!-- Task Field -->
+    <div>
+        <label for="{{ form.task.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+            {{ form.task.label }} <span class="text-red-500">*</span>
+        </label>
+        {{ form.task }}
+        {% if form.task.errors %}
+        <div class="mt-1 text-sm text-red-600">{{ form.task.errors }}</div>
+        {% endif %}
+    </div>
+
+    <!-- Time Input Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Start Time -->
+        <div>
+            <label for="{{ form.start_time.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                {{ form.start_time.label }}
+            </label>
+            {{ form.start_time }}
+            {% if form.start_time.errors %}
+            <div class="mt-1 text-sm text-red-600">{{ form.start_time.errors }}</div>
+            {% endif %}
+        </div>
+
+        <!-- End Time -->
+        <div>
+            <label for="{{ form.end_time.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                {{ form.end_time.label }}
+            </label>
+            {{ form.end_time }}
+            {% if form.end_time.errors %}
+            <div class="mt-1 text-sm text-red-600">{{ form.end_time.errors }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Duration -->
+    <div>
+        <label for="{{ form.duration_input.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+            {{ form.duration_input.label }}
+        </label>
+        {{ form.duration_input }}
+        {% if form.duration_input.help_text %}
+        <p class="mt-1 text-xs text-gray-500">{{ form.duration_input.help_text }}</p>
+        {% endif %}
+        {% if form.duration_input.errors %}
+        <div class="mt-1 text-sm text-red-600">{{ form.duration_input.errors }}</div>
+        {% endif %}
+    </div>
+
+    <!-- Description -->
+    <div>
+        <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+            {{ form.description.label }}
+        </label>
+        {{ form.description }}
+        {% if form.description.errors %}
+        <div class="mt-1 text-sm text-red-600">{{ form.description.errors }}</div>
+        {% endif %}
+    </div>
+
+    <!-- Tags -->
+    <div>
+        <label for="{{ form.tags_input.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+            {{ form.tags_input.label }}
+        </label>
+        {{ form.tags_input }}
+        {% if form.tags_input.help_text %}
+        <p class="mt-1 text-xs text-gray-500">{{ form.tags_input.help_text }}</p>
+        {% endif %}
+        {% if form.tags_input.errors %}
+        <div class="mt-1 text-sm text-red-600">{{ form.tags_input.errors }}</div>
+        {% endif %}
+    </div>
+
+    <!-- Billable Checkbox -->
+    <div class="flex items-start">
+        <div class="flex items-center h-5">
+            {{ form.is_billable }}
+        </div>
+        <div class="ml-3">
+            <label for="{{ form.is_billable.id_for_label }}" class="text-sm font-medium text-gray-700">
+                {{ form.is_billable.label }}
+            </label>
+        </div>
+    </div>
+
+    <!-- Billable Rate and Currency -->
+    <div x-show="isBillable" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+            <label for="{{ form.billable_rate.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                {{ form.billable_rate.label }}
+            </label>
+            {{ form.billable_rate }}
+            {% if form.billable_rate.errors %}
+            <div class="mt-1 text-sm text-red-600">{{ form.billable_rate.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div>
+            <label for="{{ form.currency.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                {{ form.currency.label }}
+            </label>
+            {{ form.currency }}
+            {% if form.currency.errors %}
+            <div class="mt-1 text-sm text-red-600">{{ form.currency.errors }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="flex gap-3 pt-4 border-t">
+        <button type="submit"
+                class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+            Update Entry
+        </button>
+        <button type="button"
+                @click="showModal = false"
+                class="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium">
+            Cancel
+        </button>
+    </div>
+</form>
+
+<script>
+function timeEntryInlineForm() {
+    return {
+        isBillable: false,
+
+        init() {
+            // Initialize from form values
+            this.isBillable = document.querySelector('input[name="is_billable"]')?.checked || false;
+        }
+    };
+}
+</script>

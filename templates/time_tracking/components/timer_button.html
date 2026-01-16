@@ -1,0 +1,223 @@
+<!-- Timer Button Component -->
+{% comment %}
+Reusable timer button component for task UI.
+
+Required context:
+- task: Task object
+- button_size: 'small', 'medium', or 'large' (default: 'medium')
+- button_style: 'icon', 'text', or 'full' (default: 'full')
+{% endcomment %}
+
+{% load user_filters %}
+
+{% if task %}
+<div id="timer-button-{{ task.id }}"
+     x-data="{
+         isLoading: false,
+         showConfirmation: false,
+         confirmationData: null,
+         async startTimer() {
+             this.isLoading = true;
+             try {
+                 const response = await fetch('/api/timers/start/', {
+                     method: 'POST',
+                     headers: {
+                         'Content-Type': 'application/json',
+                         'X-CSRFToken': getCsrfToken(),
+                     },
+                     body: JSON.stringify({ task_id: {{ task.id }} })
+                 });
+
+                 const data = await response.json();
+
+                 if (data.confirmation_required) {
+                     // Show confirmation dialog
+                     this.confirmationData = data;
+                     this.showConfirmation = true;
+                 } else if (response.ok) {
+                     // Timer started successfully, reload page to update UI
+                     window.location.reload();
+                 } else {
+                     alert(data.error || 'Failed to start timer');
+                 }
+             } catch (error) {
+                 console.error('Error starting timer:', error);
+                 alert('Failed to start timer. Please try again.');
+             } finally {
+                 this.isLoading = false;
+             }
+         },
+         async confirmStart(action) {
+             this.isLoading = true;
+             this.showConfirmation = false;
+             try {
+                 const response = await fetch('/api/timers/start/', {
+                     method: 'POST',
+                     headers: {
+                         'Content-Type': 'application/json',
+                         'X-CSRFToken': getCsrfToken(),
+                     },
+                     body: JSON.stringify({
+                         task_id: {{ task.id }},
+                         auto_stop_current: true
+                     })
+                 });
+
+                 if (response.ok) {
+                     window.location.reload();
+                 } else {
+                     const data = await response.json();
+                     alert(data.error || 'Failed to start timer');
+                 }
+             } catch (error) {
+                 console.error('Error starting timer:', error);
+                 alert('Failed to start timer. Please try again.');
+             } finally {
+                 this.isLoading = false;
+             }
+         },
+         async stopTimer() {
+             this.isLoading = true;
+             try {
+                 const response = await fetch('/api/timers/stop/', {
+                     method: 'POST',
+                     headers: {
+                         'Content-Type': 'application/json',
+                         'X-CSRFToken': getCsrfToken(),
+                     },
+                 });
+
+                 if (response.ok) {
+                     window.location.reload();
+                 } else {
+                     const data = await response.json();
+                     alert(data.error || 'Failed to stop timer');
+                 }
+             } catch (error) {
+                 console.error('Error stopping timer:', error);
+                 alert('Failed to stop timer. Please try again.');
+             } finally {
+                 this.isLoading = false;
+             }
+         }
+     }">
+
+    <!-- Button - Changes based on timer state -->
+    {% if task|has_active_timer:request.user %}
+        <!-- Stop Timer Button -->
+        {% if button_style == 'icon' %}
+            <button @click="stopTimer"
+                    type="button"
+                    :disabled="isLoading"
+                    class="inline-flex items-center p-2 border border-transparent rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
+                    title="Stop Timer">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                </svg>
+            </button>
+        {% else %}
+            <button @click="stopTimer"
+                    type="button"
+                    :disabled="isLoading"
+                    class="inline-flex items-center {% if button_size == 'small' %}px-2.5 py-1.5 text-xs{% elif button_size == 'large' %}px-4 py-2 text-base{% else %}px-3 py-2 text-sm{% endif %} border border-transparent font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                </svg>
+                <span x-show="!isLoading">Stop Timer</span>
+                <span x-show="isLoading">Stopping...</span>
+            </button>
+        {% endif %}
+    {% else %}
+        <!-- Start Timer Button -->
+        {% if button_style == 'icon' %}
+            <button @click="startTimer"
+                    type="button"
+                    :disabled="isLoading"
+                    class="inline-flex items-center p-2 border border-transparent rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                    title="Start Timer">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </button>
+        {% else %}
+            <button @click="startTimer"
+                    type="button"
+                    :disabled="isLoading"
+                    class="inline-flex items-center {% if button_size == 'small' %}px-2.5 py-1.5 text-xs{% elif button_size == 'large' %}px-4 py-2 text-base{% else %}px-3 py-2 text-sm{% endif %} border border-transparent font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span x-show="!isLoading">Start Timer</span>
+                <span x-show="isLoading">Starting...</span>
+            </button>
+        {% endif %}
+    {% endif %}
+
+    <!-- Auto-stop Confirmation Modal -->
+    <div x-show="showConfirmation"
+         class="fixed inset-0 z-50 overflow-y-auto"
+         style="display: none;">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+             @click="showConfirmation = false"></div>
+
+        <!-- Modal -->
+        <div class="flex min-h-screen items-center justify-center p-4">
+            <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6"
+                 @click.away="showConfirmation = false">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Active Timer Running</h3>
+                <p class="text-gray-600 mb-4" x-text="confirmationData ? confirmationData.message : ''"></p>
+
+                <!-- Current Timer Info -->
+                <div class="bg-gray-50 rounded-md p-3 mb-3" x-show="confirmationData">
+                    <div class="text-sm text-gray-700 mb-2">
+                        <strong>Current Timer:</strong>
+                        <div class="ml-4 mt-1">
+                            <div x-text="confirmationData && confirmationData.current_timer ? confirmationData.current_timer.task.title : ''"></div>
+                            <div class="text-gray-500" x-text="confirmationData && confirmationData.current_timer ? formatElapsedTime(confirmationData.current_timer.elapsed_time) : ''"></div>
+                        </div>
+                    </div>
+                    <div class="text-sm text-gray-700">
+                        <strong>New Task:</strong>
+                        <div class="ml-4 mt-1" x-text="confirmationData && confirmationData.new_task ? confirmationData.new_task.title : ''"></div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex gap-3 justify-end">
+                    <button @click="showConfirmation = false"
+                            type="button"
+                            class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-medium hover:bg-gray-300">
+                        Cancel
+                    </button>
+                    <button @click="confirmStart('stop')"
+                            type="button"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700">
+                        Stop & Start New
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Helper function to format elapsed time
+function formatElapsedTime(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
+
+// Helper function to get CSRF token
+function getCsrfToken() {
+    const cookie = document.cookie.split('; ').find(row => row.startsWith('csrftoken='));
+    return cookie ? cookie.split('=')[1] : '';
+}
+</script>
+{% endif %}

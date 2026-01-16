@@ -1,0 +1,427 @@
+{% extends "base.html" %}
+
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block title %}{% if time_entry %}Edit Time Entry{% else %}New Time Entry{% endif %}{% endblock %}
+
+{% block content %}
+{% include "includes/nav.html" %}
+
+<div class="flex">
+    <!-- Sidebar -->
+    {% include "includes/dashboard_sidebar.html" %}
+
+    <!-- Main Content -->
+    <div class="flex-1">
+        <div class="container mx-auto px-4 py-8">
+            <div class="max-w-3xl mx-auto">
+                <!-- Breadcrumbs -->
+                {% include "time_tracking/components/breadcrumbs.html" with current_page="New Entry" %}
+
+        <!-- Header -->
+        <div class="mb-6">
+            <h1 class="text-3xl font-bold text-gray-900">
+                {% if time_entry %}Edit Time Entry{% else %}Add Time Entry{% endif %}
+            </h1>
+            <p class="mt-2 text-sm text-gray-600">
+                Enter time using start/end times, start time and duration, or duration only
+            </p>
+        </div>
+
+        <!-- Form -->
+        <div class="bg-white shadow-md rounded-lg p-6">
+            <form method="post" action=""
+                  x-data="timeEntryForm()"
+                  x-init="init()"
+                  class="space-y-6">
+                {% csrf_token %}
+
+                <!-- Non-field errors -->
+                {% if form.non_field_errors %}
+                <div class="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
+                    {{ form.non_field_errors }}
+                </div>
+                {% endif %}
+
+                <!-- Task Field (Required) -->
+                <div>
+                    <label for="{{ form.task.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        {{ form.task.label }} <span class="text-red-500">*</span>
+                    </label>
+                    {{ form.task }}
+                    {% if form.task.help_text %}
+                    <p class="mt-1 text-sm text-gray-500">{{ form.task.help_text }}</p>
+                    {% endif %}
+                    {% if form.task.errors %}
+                    <div class="mt-2 text-sm text-red-600">
+                        {{ form.task.errors }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Mode Indicator -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4" x-show="mode">
+                    <div class="flex items-start">
+                        <svg class="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-blue-800">Input Mode</h3>
+                            <div class="mt-1 text-sm text-blue-700">
+                                <span x-show="mode === 'A'">Mode A: Start Time + End Time (Duration will be calculated)</span>
+                                <span x-show="mode === 'B'">Mode B: Start Time + Duration (End Time will be calculated)</span>
+                                <span x-show="mode === 'C'">Mode C: Duration Only (No timestamps)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Start Time -->
+                <div>
+                    <label for="{{ form.start_time.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        {{ form.start_time.label }}
+                    </label>
+                    {{ form.start_time }}
+                    {% if form.start_time.help_text %}
+                    <p class="mt-1 text-sm text-gray-500">{{ form.start_time.help_text }}</p>
+                    {% endif %}
+                    {% if form.start_time.errors %}
+                    <div class="mt-2 text-sm text-red-600">
+                        {{ form.start_time.errors }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- End Time (Mode A only) -->
+                <div x-show="!mode || mode === 'A'">
+                    <label for="{{ form.end_time.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        {{ form.end_time.label }}
+                        <span x-show="mode === 'B'" class="text-xs text-gray-500">(calculated)</span>
+                    </label>
+                    {{ form.end_time }}
+                    <p x-show="mode === 'B'" class="mt-1 text-sm text-gray-500">
+                        End time is automatically calculated from start time and duration
+                    </p>
+                    {% if form.end_time.help_text %}
+                    <p class="mt-1 text-sm text-gray-500">{{ form.end_time.help_text }}</p>
+                    {% endif %}
+                    {% if form.end_time.errors %}
+                    <div class="mt-2 text-sm text-red-600">
+                        {{ form.end_time.errors }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Duration -->
+                <div>
+                    <label for="{{ form.duration_input.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        {{ form.duration_input.label }}
+                        <span x-show="mode === 'A'" class="text-xs text-gray-500">(calculated)</span>
+                        <span x-show="!mode || mode === 'B' || mode === 'C'" class="text-red-500">*</span>
+                    </label>
+
+                    <!-- Time Suggestion (shown when task selected and no duration entered) -->
+                    <div x-show="suggestion && !durationInput && taskId"
+                         class="mb-2 p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 text-sm text-indigo-800">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+                                    </svg>
+                                    <span class="font-medium" x-text="suggestion"></span>
+                                </div>
+                            </div>
+                            <button type="button"
+                                    @click="acceptSuggestion()"
+                                    class="ml-3 text-xs px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors">
+                                Use This
+                            </button>
+                        </div>
+                    </div>
+
+                    {{ form.duration_input }}
+                    <p x-show="mode === 'A'" class="mt-1 text-sm text-gray-500">
+                        Duration is automatically calculated from start and end times
+                    </p>
+                    {% if form.duration_input.help_text %}
+                    <p class="mt-1 text-sm text-gray-500">{{ form.duration_input.help_text }}</p>
+                    {% endif %}
+                    {% if form.duration_input.errors %}
+                    <div class="mt-2 text-sm text-red-600">
+                        {{ form.duration_input.errors }}
+                    </div>
+                    {% endif %}
+                    <!-- Client-side validation message -->
+                    <div x-show="validationError" class="mt-2 text-sm text-red-600" x-text="validationError"></div>
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        {{ form.description.label }}
+                    </label>
+                    {{ form.description }}
+                    {% if form.description.help_text %}
+                    <p class="mt-1 text-sm text-gray-500">{{ form.description.help_text }}</p>
+                    {% endif %}
+                    {% if form.description.errors %}
+                    <div class="mt-2 text-sm text-red-600">
+                        {{ form.description.errors }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Tags -->
+                <div>
+                    <label for="{{ form.tags_input.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        <div class="flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z" />
+                            </svg>
+                            <span>{{ form.tags_input.label }}</span>
+                        </div>
+                    </label>
+                    {{ form.tags_input }}
+                    {% if form.tags_input.help_text %}
+                    <p class="mt-1 text-sm text-gray-500">{{ form.tags_input.help_text }}</p>
+                    {% endif %}
+                    {% if form.tags_input.errors %}
+                    <div class="mt-2 text-sm text-red-600">
+                        {{ form.tags_input.errors }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Billable Checkbox -->
+                <div class="flex items-start">
+                    <div class="flex items-center h-5">
+                        {{ form.is_billable }}
+                    </div>
+                    <div class="ml-3">
+                        <label for="{{ form.is_billable.id_for_label }}" class="font-medium text-gray-700">
+                            {{ form.is_billable.label }}
+                        </label>
+                        <p class="text-sm text-gray-500">Track this time as billable</p>
+                    </div>
+                </div>
+
+                <!-- Billable Rate and Currency (shown only when billable is checked) -->
+                <div x-show="isBillable" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.billable_rate.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            {{ form.billable_rate.label }}
+                        </label>
+                        {{ form.billable_rate }}
+                        {% if form.billable_rate.help_text %}
+                        <p class="mt-1 text-sm text-gray-500">{{ form.billable_rate.help_text }}</p>
+                        {% endif %}
+                        {% if form.billable_rate.errors %}
+                        <div class="mt-2 text-sm text-red-600">
+                            {{ form.billable_rate.errors }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.currency.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            {{ form.currency.label }}
+                        </label>
+                        {{ form.currency }}
+                        {% if form.currency.errors %}
+                        <div class="mt-2 text-sm text-red-600">
+                            {{ form.currency.errors }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Estimated Revenue Display -->
+                <div x-show="isBillable && estimatedRevenue > 0" class="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium text-green-800">Estimated Revenue:</span>
+                        <span class="text-lg font-bold text-green-900" x-text="'$' + estimatedRevenue.toFixed(2)"></span>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="flex gap-3 pt-4 border-t">
+                    <button type="submit"
+                            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                        {% if time_entry %}Update Entry{% else %}Create Entry{% endif %}
+                    </button>
+                    <a href="{% url 'time_tracking:time-entry-list-html' %}"
+                       class="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function timeEntryForm() {
+    return {
+        mode: null,
+        startTime: '',
+        endTime: '',
+        durationInput: '',
+        taskId: '',
+        isBillable: false,
+        billableRate: 0,
+        estimatedRevenue: 0,
+        validationError: '',
+        suggestion: '',
+        suggestedDuration: '',
+
+        init() {
+            // Initialize from form values
+            this.startTime = document.querySelector('input[name="start_time"]')?.value || '';
+            this.endTime = document.querySelector('input[name="end_time"]')?.value || '';
+            this.durationInput = document.querySelector('input[name="duration_input"]')?.value || '';
+            this.taskId = document.querySelector('select[name="task"]')?.value || '';
+            this.isBillable = document.querySelector('input[name="is_billable"]')?.checked || false;
+            this.billableRate = parseFloat(document.querySelector('input[name="billable_rate"]')?.value || 0);
+
+            // Detect initial mode
+            this.detectMode();
+            this.calculateRevenue();
+
+            // Fetch suggestion if task is already selected
+            if (this.taskId) {
+                this.fetchSuggestion();
+            }
+        },
+
+        detectMode() {
+            if (this.startTime && this.endTime) {
+                this.mode = 'A';
+            } else if (this.startTime && this.durationInput) {
+                this.mode = 'B';
+            } else if (this.durationInput && !this.startTime && !this.endTime) {
+                this.mode = 'C';
+            } else {
+                this.mode = null;
+            }
+        },
+
+        onStartTimeChange() {
+            this.validationError = '';
+            this.detectMode();
+        },
+
+        onEndTimeChange() {
+            this.validationError = '';
+            this.detectMode();
+            this.validateEndTime();
+        },
+
+        onDurationChange() {
+            this.validationError = '';
+            this.detectMode();
+            this.validateDuration();
+            this.calculateRevenue();
+        },
+
+        onTaskChange() {
+            // Fetch time suggestion when task changes
+            this.fetchSuggestion();
+        },
+
+        async fetchSuggestion() {
+            if (!this.taskId) {
+                this.suggestion = '';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/time_tracking/api/suggestions/${this.taskId}/`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.suggestion) {
+                        this.suggestion = data.suggestion_text;
+                        this.suggestedDuration = data.duration_input;
+                    } else {
+                        this.suggestion = '';
+                        this.suggestedDuration = '';
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching suggestion:', error);
+                this.suggestion = '';
+            }
+        },
+
+        acceptSuggestion() {
+            if (this.suggestedDuration) {
+                this.durationInput = this.suggestedDuration;
+                document.querySelector('input[name="duration_input"]').value = this.suggestedDuration;
+                this.onDurationChange();
+                this.suggestion = ''; // Hide suggestion after accepting
+            }
+        },
+
+        validateEndTime() {
+            if (this.mode === 'A' && this.startTime && this.endTime) {
+                const start = new Date(this.startTime);
+                const end = new Date(this.endTime);
+                if (end <= start) {
+                    this.validationError = 'End time must be after start time.';
+                }
+            }
+        },
+
+        validateDuration() {
+            if (!this.durationInput) return;
+
+            // Check for negative duration
+            if (this.durationInput.startsWith('-')) {
+                this.validationError = 'Duration cannot be negative.';
+                return;
+            }
+
+            // Validate HH:MM format
+            if (this.durationInput.includes(':')) {
+                const parts = this.durationInput.split(':');
+                if (parts.length !== 2) {
+                    this.validationError = 'Duration must be in HH:MM format (e.g., 2:30)';
+                    return;
+                }
+                const minutes = parseInt(parts[1]);
+                if (minutes >= 60) {
+                    this.validationError = 'Minutes must be less than 60.';
+                }
+            }
+        },
+
+        calculateRevenue() {
+            if (!this.isBillable || !this.billableRate || !this.durationInput) {
+                this.estimatedRevenue = 0;
+                return;
+            }
+
+            // Parse duration to hours
+            let hours = 0;
+            if (this.durationInput.includes(':')) {
+                const parts = this.durationInput.split(':');
+                hours = parseInt(parts[0] || 0) + (parseInt(parts[1] || 0) / 60);
+            } else {
+                hours = parseFloat(this.durationInput);
+            }
+
+            this.estimatedRevenue = hours * this.billableRate;
+        }
+    };
+}
+</script>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

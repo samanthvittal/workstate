@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+        </div>
+    </div>
+</div>
+
+{% block title %}{{ page_title }} - Workstate{% endblock %}
+
+{% block content %}
+{% include "includes/nav.html" %}
+
+<div class="flex">
+    <!-- Sidebar -->
+    {% include "includes/dashboard_sidebar.html" %}
+
+    <!-- Main Content -->
+    <div class="flex-1">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Breadcrumbs -->
+            {% include "time_tracking/components/breadcrumbs.html" with current_page="Settings" %}
+
+    <!-- Page Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">{{ page_title }}</h1>
+        <p class="mt-2 text-sm text-gray-600">{{ page_description }}</p>
+    </div>
+
+    <!-- Settings Form -->
+    <form method="post" class="space-y-8">
+        {% csrf_token %}
+
+        <!-- Time Rounding Section -->
+        <div class="bg-white shadow-sm rounded-lg border border-gray-200 p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">Time Rounding</h2>
+            <p class="text-sm text-gray-600 mb-6">
+                Automatically round time entries to make billing and reporting easier.
+            </p>
+
+            <div class="space-y-4">
+                <!-- Rounding Interval -->
+                <div>
+                    <label for="{{ form.rounding_interval.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        {{ form.rounding_interval.label }}
+                    </label>
+                    {{ form.rounding_interval }}
+                    {% if form.rounding_interval.help_text %}
+                        <p class="mt-1 text-sm text-gray-500">{{ form.rounding_interval.help_text }}</p>
+                    {% endif %}
+                    {% if form.rounding_interval.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.rounding_interval.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Rounding Method -->
+                <div>
+                    <label for="{{ form.rounding_method.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        {{ form.rounding_method.label }}
+                    </label>
+                    {{ form.rounding_method }}
+                    {% if form.rounding_method.help_text %}
+                        <p class="mt-1 text-sm text-gray-500">{{ form.rounding_method.help_text }}</p>
+                    {% endif %}
+                    {% if form.rounding_method.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.rounding_method.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Rounding Examples -->
+                <div class="mt-4 p-4 bg-blue-50 rounded-lg">
+                    <h3 class="text-sm font-medium text-blue-900 mb-2">Rounding Examples</h3>
+                    <div class="text-sm text-blue-800 space-y-1">
+                        <p><strong>5 minutes:</strong></p>
+                        <ul class="ml-4 space-y-0.5">
+                            <li>Round Up: 1h 3m → 1h 5m</li>
+                            <li>Round Down: 1h 3m → 1h 0m</li>
+                            <li>Round to Nearest: 1h 3m → 1h 5m, 1h 2m → 1h 0m</li>
+                        </ul>
+                        <p class="mt-2"><strong>15 minutes:</strong></p>
+                        <ul class="ml-4 space-y-0.5">
+                            <li>Round Up: 1h 10m → 1h 15m</li>
+                            <li>Round Down: 1h 10m → 1h 0m</li>
+                            <li>Round to Nearest: 1h 10m → 1h 15m, 1h 5m → 1h 0m</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Idle Detection Section -->
+        <div class="bg-white shadow-sm rounded-lg border border-gray-200 p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">Idle Detection</h2>
+            <p class="text-sm text-gray-600 mb-6">
+                Get notified when your timer has been running without activity, so you can keep or discard idle time.
+            </p>
+
+            <div class="space-y-4">
+                <!-- Idle Threshold -->
+                <div>
+                    <label for="{{ form.idle_threshold_minutes.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        {{ form.idle_threshold_minutes.label }}
+                    </label>
+                    {{ form.idle_threshold_minutes }}
+                    {% if form.idle_threshold_minutes.help_text %}
+                        <p class="mt-1 text-sm text-gray-500">{{ form.idle_threshold_minutes.help_text }}</p>
+                    {% endif %}
+                    {% if form.idle_threshold_minutes.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.idle_threshold_minutes.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                    <p class="text-sm text-gray-700">
+                        <strong>How it works:</strong> When your timer has been running for longer than the idle threshold without any detected activity, you'll receive a notification asking whether to keep the time, discard idle time, or stop the timer at the point when you went idle.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pomodoro Timer Section -->
+        <div class="bg-white shadow-sm rounded-lg border border-gray-200 p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">Pomodoro Timer</h2>
+            <p class="text-sm text-gray-600 mb-6">
+                Use the Pomodoro Technique to break work into focused intervals with short breaks in between.
+            </p>
+
+            <div class="space-y-4">
+                <!-- Pomodoro Work Minutes -->
+                <div>
+                    <label for="{{ form.pomodoro_work_minutes.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        {{ form.pomodoro_work_minutes.label }}
+                    </label>
+                    {{ form.pomodoro_work_minutes }}
+                    {% if form.pomodoro_work_minutes.help_text %}
+                        <p class="mt-1 text-sm text-gray-500">{{ form.pomodoro_work_minutes.help_text }}</p>
+                    {% endif %}
+                    {% if form.pomodoro_work_minutes.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.pomodoro_work_minutes.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Pomodoro Break Minutes -->
+                <div>
+                    <label for="{{ form.pomodoro_break_minutes.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        {{ form.pomodoro_break_minutes.label }}
+                    </label>
+                    {{ form.pomodoro_break_minutes }}
+                    {% if form.pomodoro_break_minutes.help_text %}
+                        <p class="mt-1 text-sm text-gray-500">{{ form.pomodoro_break_minutes.help_text }}</p>
+                    {% endif %}
+                    {% if form.pomodoro_break_minutes.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.pomodoro_break_minutes.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                    <p class="text-sm text-gray-700">
+                        <strong>About Pomodoro:</strong> The Pomodoro Technique is a time management method that uses a timer to break work into intervals, traditionally 25 minutes in length, separated by short breaks. These intervals are called "pomodoros."
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Billable Rates Section -->
+        <div class="bg-white shadow-sm rounded-lg border border-gray-200 p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">Billable Rates</h2>
+            <p class="text-sm text-gray-600 mb-6">
+                Set your default hourly rate for billing clients. This can be overridden per project or task.
+            </p>
+
+            <div class="space-y-4">
+                <!-- Default Billable Rate -->
+                <div>
+                    <label for="{{ form.default_billable_rate.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        {{ form.default_billable_rate.label }}
+                    </label>
+                    {{ form.default_billable_rate }}
+                    {% if form.default_billable_rate.help_text %}
+                        <p class="mt-1 text-sm text-gray-500">{{ form.default_billable_rate.help_text }}</p>
+                    {% endif %}
+                    {% if form.default_billable_rate.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.default_billable_rate.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Default Currency -->
+                <div>
+                    <label for="{{ form.default_currency.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        {{ form.default_currency.label }}
+                    </label>
+                    {{ form.default_currency }}
+                    {% if form.default_currency.help_text %}
+                        <p class="mt-1 text-sm text-gray-500">{{ form.default_currency.help_text }}</p>
+                    {% endif %}
+                    {% if form.default_currency.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.default_currency.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                    <p class="text-sm text-gray-700">
+                        <strong>Rate precedence:</strong> When calculating billable revenue, the system uses rates in this order: Task rate → Project rate → Your default rate. This default rate will be used when no specific rate is set at the task or project level.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="flex items-center justify-end gap-4">
+            <a href="{% url 'time_tracking:time-entry-list-html' %}"
+               class="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                Cancel
+            </a>
+            <button type="submit"
+                    class="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                Save Preferences
+            </button>
+        </div>
+    </form>
+</div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

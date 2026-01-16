@@ -1,0 +1,201 @@
+{% comment %}
+Pomodoro progress indicator for timer widget.
+
+Shows current Pomodoro session progress (e.g., "1/4 Pomodoros") in the header timer.
+{% endcomment %}
+
+<div x-data="pomodoroIndicator"
+     x-show="isActive"
+     class="flex items-center gap-2 text-sm">
+
+    <!-- Pomodoro icon -->
+    <svg class="h-4 w-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+        <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+    </svg>
+
+    <!-- Session count and timer -->
+    <div class="flex items-center gap-1">
+        <span class="font-medium" x-text="sessionNumber"></span>
+        <span class="text-gray-500">/</span>
+        <span class="text-gray-500">4</span>
+
+        <!-- Countdown timer for current session -->
+        <span class="ml-2 text-xs font-mono"
+              x-show="isRunning"
+              :class="{'text-orange-600': remainingSeconds < 300, 'text-red-600': remainingSeconds < 60}"
+              x-text="formatTime(remainingSeconds)"></span>
+    </div>
+
+    <!-- Break indicator -->
+    <div x-show="isBreak" class="flex items-center gap-1 text-blue-600">
+        <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+        </svg>
+        <span class="text-xs font-medium">Break</span>
+    </div>
+</div>
+
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.data('pomodoroIndicator', () => ({
+        isActive: false,
+        isRunning: false,
+        isBreak: false,
+        sessionNumber: 1,
+        workMinutes: 25,
+        breakMinutes: 5,
+        startedAt: null,
+        remainingSeconds: 0,
+        intervalId: null,
+
+        init() {
+            // Check for active Pomodoro session on load
+            this.checkPomodoroStatus();
+
+            // Listen for Pomodoro events
+            window.addEventListener('pomodoro-started', (event) => {
+                this.handlePomodoroStart(event.detail);
+            });
+
+            window.addEventListener('pomodoro-complete', (event) => {
+                this.handlePomodoroComplete(event.detail);
+            });
+
+            window.addEventListener('pomodoro-break-start', (event) => {
+                this.handleBreakStart(event.detail);
+            });
+
+            window.addEventListener('timer-stopped', () => {
+                this.reset();
+            });
+        },
+
+        checkPomodoroStatus() {
+            fetch('/time_tracking/api/pomodoro/status/')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.pomodoro_active && data.session) {
+                        this.isActive = true;
+                        this.isRunning = true;
+                        this.sessionNumber = data.session.session_number;
+                        this.workMinutes = data.session.work_minutes;
+                        this.breakMinutes = data.session.break_minutes;
+                        this.startedAt = new Date(data.session.started_at);
+                        this.startCountdown();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking Pomodoro status:', error);
+                });
+        },
+
+        handlePomodoroStart(data) {
+            this.isActive = true;
+            this.isRunning = true;
+            this.isBreak = false;
+            this.sessionNumber = data.session_number;
+            this.workMinutes = data.work_minutes;
+            this.startedAt = new Date(data.started_at);
+            this.startCountdown();
+        },
+
+        handlePomodoroComplete(data) {
+            this.isRunning = false;
+            this.stopCountdown();
+        },
+
+        handleBreakStart(data) {
+            this.isBreak = true;
+            this.isRunning = true;
+            this.workMinutes = data.duration_minutes;
+            this.startedAt = new Date();
+            this.startCountdown();
+        },
+
+        startCountdown() {
+            this.stopCountdown();
+
+            this.intervalId = setInterval(() => {
+                const now = new Date();
+                const elapsed = Math.floor((now - this.startedAt) / 1000);
+                const total = this.workMinutes * 60;
+                this.remainingSeconds = Math.max(0, total - elapsed);
+
+                // Check if session completed
+                if (this.remainingSeconds === 0 && this.isRunning && !this.isBreak) {
+                    this.completeSession();
+                } else if (this.remainingSeconds === 0 && this.isBreak) {
+                    this.endBreak();
+                }
+            }, 1000);
+        },
+
+        stopCountdown() {
+            if (this.intervalId) {
+                clearInterval(this.intervalId);
+                this.intervalId = null;
+            }
+        },
+
+        async completeSession() {
+            this.stopCountdown();
+            this.isRunning = false;
+
+            // Call API to mark session complete
+            try {
+                const response = await fetch(`/time_tracking/api/pomodoro/${this.sessionId}/complete/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': this.getCsrfToken(),
+                    },
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    // Trigger notification
+                    window.dispatchEvent(new CustomEvent('pomodoro-complete', {
+                        detail: {
+                            session_id: data.session.id,
+                            session_number: data.session.session_number,
+                            break_minutes: data.session.break_minutes,
+                        }
+                    }));
+                }
+            } catch (error) {
+                console.error('Error completing Pomodoro session:', error);
+            }
+        },
+
+        endBreak() {
+            this.stopCountdown();
+            this.isBreak = false;
+            this.isRunning = false;
+
+            // Prompt to start next Pomodoro or continue regular timer
+            // This is handled by the timer widget
+        },
+
+        reset() {
+            this.stopCountdown();
+            this.isActive = false;
+            this.isRunning = false;
+            this.isBreak = false;
+            this.sessionNumber = 1;
+        },
+
+        formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        },
+
+        getCsrfToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+        },
+
+        destroy() {
+            this.stopCountdown();
+        }
+    }));
+});
+</script>

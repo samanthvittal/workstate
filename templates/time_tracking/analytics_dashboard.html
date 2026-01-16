@@ -1,0 +1,414 @@
+{% extends "base.html" %}
+{% load time_filters %}
+
+        </div>
+    </div>
+</div>
+
+{% block title %}Analytics Dashboard{% endblock %}
+
+{% block extra_head %}
+<!-- Chart.js for visualizations -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block content %}
+{% include "includes/nav.html" %}
+
+<div class="flex">
+    <!-- Sidebar -->
+    {% include "includes/dashboard_sidebar.html" %}
+
+    <!-- Main Content -->
+    <div class="flex-1">
+        <div class="container mx-auto px-4 py-8">
+            <!-- Breadcrumbs -->
+            {% include "time_tracking/components/breadcrumbs.html" with current_page="Analytics" %}
+
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
+        <p class="mt-2 text-sm text-gray-600">
+            Comprehensive insights into your time tracking data
+        </p>
+    </div>
+
+    {% if error_message %}
+    <div class="mb-6 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
+        {{ error_message }}
+    </div>
+    {% else %}
+
+    <!-- Date Range Selector -->
+    <div class="mb-6 bg-white shadow rounded-lg p-6">
+        <form method="get" action="{% url 'time_tracking:analytics-dashboard' %}" class="space-y-4">
+            <!-- Quick Range Filters -->
+            <div class="flex flex-wrap gap-2">
+                <button type="submit" name="range" value="today"
+                        class="px-4 py-2 rounded-lg text-sm font-medium transition-colors
+                               {% if active_range == 'today' %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                    Today
+                </button>
+                <button type="submit" name="range" value="this_week"
+                        class="px-4 py-2 rounded-lg text-sm font-medium transition-colors
+                               {% if active_range == 'this_week' %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                    This Week
+                </button>
+                <button type="submit" name="range" value="this_month"
+                        class="px-4 py-2 rounded-lg text-sm font-medium transition-colors
+                               {% if active_range == 'this_month' %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                    This Month
+                </button>
+                <button type="submit" name="range" value="last_month"
+                        class="px-4 py-2 rounded-lg text-sm font-medium transition-colors
+                               {% if active_range == 'last_month' %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                    Last Month
+                </button>
+                <button type="submit" name="range" value="last_3_months"
+                        class="px-4 py-2 rounded-lg text-sm font-medium transition-colors
+                               {% if active_range == 'last_3_months' %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                    Last 3 Months
+                </button>
+                <button type="submit" name="range" value="this_year"
+                        class="px-4 py-2 rounded-lg text-sm font-medium transition-colors
+                               {% if active_range == 'this_year' %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                    This Year
+                </button>
+            </div>
+
+            <!-- Custom Date Range -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label for="start_date" class="block text-sm font-medium text-gray-700 mb-1">
+                        Start Date
+                    </label>
+                    <input type="date" id="start_date" name="start_date"
+                           value="{{ start_date|date:'Y-m-d' }}"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <div>
+                    <label for="end_date" class="block text-sm font-medium text-gray-700 mb-1">
+                        End Date
+                    </label>
+                    <input type="date" id="end_date" name="end_date"
+                           value="{{ end_date|date:'Y-m-d' }}"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <div class="flex items-end">
+                    <button type="submit"
+                            class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        Apply Custom Range
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <!-- Today Card -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-medium text-gray-600">Today</h3>
+                <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <p class="text-3xl font-bold text-gray-900">{{ today_summary.total_hours|format_duration }}</p>
+            <p class="text-sm text-gray-500 mt-1">{{ today_summary.total_entries }} entries</p>
+        </div>
+
+        <!-- This Week Card -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-medium text-gray-600">This Week</h3>
+                <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+            </div>
+            <p class="text-3xl font-bold text-gray-900">{{ week_summary.total_hours|format_duration }}</p>
+            <p class="text-sm text-gray-500 mt-1">{{ week_summary.total_entries }} entries</p>
+        </div>
+
+        <!-- Selected Period Card -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-medium text-gray-600">Selected Period</h3>
+                <svg class="w-8 h-8 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+            </div>
+            <p class="text-3xl font-bold text-gray-900">{{ summary.total_hours|format_duration }}</p>
+            <p class="text-sm text-gray-500 mt-1">{{ summary.total_entries }} entries</p>
+        </div>
+    </div>
+
+    <!-- Billable Summary -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white shadow rounded-lg p-6">
+            <h3 class="text-sm font-medium text-gray-600 mb-2">Billable Hours</h3>
+            <p class="text-2xl font-bold text-green-600">{{ summary.billable_hours|format_duration }}</p>
+        </div>
+
+        <div class="bg-white shadow rounded-lg p-6">
+            <h3 class="text-sm font-medium text-gray-600 mb-2">Non-billable Hours</h3>
+            <p class="text-2xl font-bold text-gray-600">{{ summary.non_billable_hours|format_duration }}</p>
+        </div>
+
+        <div class="bg-white shadow rounded-lg p-6">
+            <h3 class="text-sm font-medium text-gray-600 mb-2">Total Revenue</h3>
+            <p class="text-2xl font-bold text-blue-600">${{ summary.total_revenue|floatformat:2 }}</p>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Project Breakdown Chart -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Time by Project</h3>
+            <div class="relative h-64">
+                <canvas id="projectChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Task Breakdown Chart -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Top 10 Tasks</h3>
+            <div class="relative h-64">
+                <canvas id="taskChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tag Breakdown -->
+    {% if tag_breakdown %}
+    <div class="bg-white shadow rounded-lg p-6 mb-8">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Time by Tag</h3>
+        <div class="relative h-64">
+            <canvas id="tagChart"></canvas>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Time Patterns Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Time of Day Heatmap -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Time of Day Heatmap</h3>
+            <div class="relative h-64">
+                <canvas id="heatmapChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Day of Week Patterns -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Day of Week Patterns</h3>
+            <div class="relative h-64">
+                <canvas id="dayPatternChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Buttons -->
+    <div class="bg-white shadow rounded-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Export Report</h3>
+        <div class="flex flex-wrap gap-4">
+            <a href="{% url 'time_tracking:export-csv' %}?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}"
+               class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors inline-flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                Export to CSV
+            </a>
+
+            <a href="{% url 'time_tracking:export-pdf' %}?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}"
+               class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors inline-flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                </svg>
+                Export to PDF
+            </a>
+
+            <a href="{% url 'time_tracking:export-excel' %}?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}"
+               class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                Export to Excel
+            </a>
+        </div>
+    </div>
+
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Common chart options
+    const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom',
+            }
+        }
+    };
+
+    // Project Breakdown Chart (Pie)
+    const projectData = {{ project_chart_data|safe }};
+    if (projectData.labels.length > 0) {
+        const projectCtx = document.getElementById('projectChart').getContext('2d');
+        new Chart(projectCtx, {
+            type: 'pie',
+            data: {
+                labels: projectData.labels,
+                datasets: [{
+                    data: projectData.data,
+                    backgroundColor: [
+                        '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+                        '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16'
+                    ]
+                }]
+            },
+            options: {
+                ...commonOptions,
+                plugins: {
+                    ...commonOptions.plugins,
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const hours = context.parsed.toFixed(2);
+                                return context.label + ': ' + hours + ' hours';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Task Breakdown Chart (Horizontal Bar)
+    const taskData = {{ task_chart_data|safe }};
+    if (taskData.labels.length > 0) {
+        const taskCtx = document.getElementById('taskChart').getContext('2d');
+        new Chart(taskCtx, {
+            type: 'bar',
+            data: {
+                labels: taskData.labels,
+                datasets: [{
+                    label: 'Hours',
+                    data: taskData.data,
+                    backgroundColor: '#3b82f6'
+                }]
+            },
+            options: {
+                ...commonOptions,
+                indexAxis: 'y',
+                plugins: {
+                    ...commonOptions.plugins,
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.parsed.x.toFixed(2) + ' hours';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Tag Breakdown Chart
+    const tagData = {{ tag_chart_data|safe }};
+    if (tagData.labels.length > 0) {
+        const tagCtx = document.getElementById('tagChart').getContext('2d');
+        new Chart(tagCtx, {
+            type: 'bar',
+            data: {
+                labels: tagData.labels,
+                datasets: [{
+                    label: 'Hours',
+                    data: tagData.data,
+                    backgroundColor: '#10b981'
+                }]
+            },
+            options: commonOptions
+        });
+    }
+
+    // Time of Day Heatmap
+    const heatmapData = {{ heatmap_chart_data|safe }};
+    const heatmapCtx = document.getElementById('heatmapChart').getContext('2d');
+    new Chart(heatmapCtx, {
+        type: 'bar',
+        data: {
+            labels: heatmapData.labels,
+            datasets: [{
+                label: 'Hours',
+                data: heatmapData.data,
+                backgroundColor: function(context) {
+                    const value = context.parsed.y;
+                    const max = Math.max(...heatmapData.data);
+                    const intensity = max > 0 ? value / max : 0;
+                    return `rgba(59, 130, 246, ${0.2 + intensity * 0.8})`;
+                },
+                borderColor: '#3b82f6',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            ...commonOptions,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+
+    // Day of Week Patterns
+    const dayPatternData = {{ day_pattern_chart_data|safe }};
+    const dayPatternCtx = document.getElementById('dayPatternChart').getContext('2d');
+    new Chart(dayPatternCtx, {
+        type: 'bar',
+        data: {
+            labels: dayPatternData.labels,
+            datasets: [
+                {
+                    label: 'Billable',
+                    data: dayPatternData.billable_data,
+                    backgroundColor: '#10b981'
+                },
+                {
+                    label: 'Non-billable',
+                    data: dayPatternData.non_billable_data,
+                    backgroundColor: '#6b7280'
+                }
+            ]
+        },
+        options: {
+            ...commonOptions,
+            scales: {
+                x: {
+                    stacked: true
+                },
+                y: {
+                    stacked: true,
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+});
+</script>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

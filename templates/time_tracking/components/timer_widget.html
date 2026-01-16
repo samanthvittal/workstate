@@ -1,0 +1,493 @@
+<!-- Timer Widget Component -->
+<div id="timer-widget-container"
+     x-data="timerWidget()"
+     x-init="initializeTimer()"
+     x-show="isRunning"
+     class="fixed top-0 left-0 right-0 z-40 bg-blue-600 shadow-md"
+     style="display: none;">
+
+    <!-- Desktop Layout (1024px+) -->
+    <div class="hidden lg:block">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <div class="flex items-center justify-between gap-4">
+                <!-- Timer Info -->
+                <div class="flex items-center gap-4 flex-1 min-w-0">
+                    <!-- Timer Icon -->
+                    <div class="flex-shrink-0">
+                        <svg class="w-6 h-6 text-white animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+
+                    <!-- Elapsed Time -->
+                    <div class="flex-shrink-0">
+                        <div class="text-2xl font-bold text-white font-mono" x-text="formattedElapsedTime"></div>
+                    </div>
+
+                    <!-- Task and Project Info -->
+                    <div class="flex-1 min-w-0">
+                        <div class="text-white font-medium truncate" x-text="taskName"></div>
+                        <div class="text-blue-200 text-sm truncate" x-text="projectName" x-show="projectName"></div>
+                    </div>
+
+                    <!-- Description (if present) -->
+                    <div class="flex-1 min-w-0" x-show="description">
+                        <div class="text-blue-100 text-sm italic truncate" x-text="description"></div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    <!-- Quick Edit Button -->
+                    <button @click="showQuickEdit = !showQuickEdit"
+                            type="button"
+                            class="px-3 py-2 bg-blue-500 hover:bg-blue-400 text-white rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-600">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                    </button>
+
+                    <!-- Stop Button -->
+                    <button @click="stopTimer"
+                            type="button"
+                            class="px-4 py-2 bg-green-500 hover:bg-green-400 text-white rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-600"
+                            :disabled="isLoading">
+                        <span x-show="!isLoading">Stop Timer</span>
+                        <span x-show="isLoading">Stopping...</span>
+                    </button>
+
+                    <!-- Discard Button -->
+                    <button @click="showDiscardConfirmation"
+                            type="button"
+                            class="px-4 py-2 bg-red-500 hover:bg-red-400 text-white rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-600"
+                            :disabled="isLoading">
+                        Discard
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tablet Layout (768px-1024px) -->
+    <div class="hidden md:block lg:hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-2">
+            <div class="flex items-center justify-between gap-3">
+                <!-- Timer Info (Compact) -->
+                <div class="flex items-center gap-3 flex-1 min-w-0">
+                    <svg class="w-5 h-5 text-white animate-pulse flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div class="text-xl font-bold text-white font-mono flex-shrink-0" x-text="formattedElapsedTime"></div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-white text-sm font-medium truncate" x-text="taskName"></div>
+                    </div>
+                </div>
+
+                <!-- Compact Buttons -->
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    <button @click="showQuickEdit = !showQuickEdit"
+                            type="button"
+                            class="p-2 bg-blue-500 hover:bg-blue-400 text-white rounded-md text-sm transition-colors"
+                            title="Quick Edit">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                    </button>
+                    <button @click="stopTimer"
+                            type="button"
+                            class="px-3 py-2 bg-green-500 hover:bg-green-400 text-white rounded-md text-sm font-medium transition-colors"
+                            :disabled="isLoading">
+                        Stop
+                    </button>
+                    <button @click="showDiscardConfirmation"
+                            type="button"
+                            class="px-3 py-2 bg-red-500 hover:bg-red-400 text-white rounded-md text-sm font-medium transition-colors"
+                            :disabled="isLoading">
+                        Discard
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Layout (<768px) - Icon only, expand on tap -->
+    <div class="md:hidden">
+        <div class="px-4 py-2">
+            <div @click="mobileExpanded = !mobileExpanded"
+                 class="cursor-pointer">
+                <!-- Collapsed View -->
+                <div x-show="!mobileExpanded" class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5 text-white animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div class="text-lg font-bold text-white font-mono" x-text="formattedElapsedTime"></div>
+                    </div>
+                    <div class="text-white text-sm">Tap to expand</div>
+                </div>
+
+                <!-- Expanded View -->
+                <div x-show="mobileExpanded" @click.stop class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-5 h-5 text-white animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <div class="text-lg font-bold text-white font-mono" x-text="formattedElapsedTime"></div>
+                        </div>
+                        <button @click="mobileExpanded = false" class="text-white p-1">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="text-white font-medium" x-text="taskName"></div>
+                    <div class="text-blue-200 text-sm" x-text="projectName" x-show="projectName"></div>
+                    <div class="text-blue-100 text-sm italic" x-text="description" x-show="description"></div>
+                    <div class="flex gap-2">
+                        <button @click="stopTimer"
+                                type="button"
+                                class="flex-1 px-4 py-2 bg-green-500 hover:bg-green-400 text-white rounded-md text-sm font-medium transition-colors"
+                                :disabled="isLoading">
+                            Stop
+                        </button>
+                        <button @click="showDiscardConfirmation"
+                                type="button"
+                                class="flex-1 px-4 py-2 bg-red-500 hover:bg-red-400 text-white rounded-md text-sm font-medium transition-colors"
+                                :disabled="isLoading">
+                            Discard
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Edit Form (shown when edit button clicked) -->
+    <div x-show="showQuickEdit"
+         class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-3"
+         style="display: none;">
+        <div class="bg-blue-500 rounded-md p-3">
+            <label class="block text-white text-sm font-medium mb-1">Description</label>
+            <div class="flex gap-2">
+                <input type="text"
+                       x-model="editDescription"
+                       class="flex-1 rounded-md border-0 px-3 py-2 text-gray-900 focus:ring-2 focus:ring-white"
+                       placeholder="Add description...">
+                <button @click="saveDescription"
+                        type="button"
+                        class="px-4 py-2 bg-white text-blue-600 rounded-md text-sm font-medium hover:bg-gray-100">
+                    Save
+                </button>
+                <button @click="showQuickEdit = false; editDescription = description"
+                        type="button"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Discard Confirmation Modal -->
+<div x-data="{ showModal: false }"
+     @show-discard-modal.window="showModal = true"
+     x-show="showModal"
+     class="fixed inset-0 z-50 overflow-y-auto"
+     style="display: none;">
+    <!-- Backdrop -->
+    <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+         @click="showModal = false"></div>
+
+    <!-- Modal -->
+    <div class="flex min-h-screen items-center justify-center p-4">
+        <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6"
+             @click.away="showModal = false">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Discard Timer?</h3>
+            <p class="text-gray-600 mb-4">
+                Are you sure you want to discard this timer? This action cannot be undone.
+            </p>
+            <div class="bg-gray-50 rounded-md p-3 mb-4">
+                <div class="text-sm text-gray-700">
+                    <div><strong>Task:</strong> <span x-text="$store.timerWidget.taskName"></span></div>
+                    <div><strong>Elapsed Time:</strong> <span x-text="$store.timerWidget.formattedElapsedTime"></span></div>
+                </div>
+            </div>
+            <div class="flex gap-3 justify-end">
+                <button @click="showModal = false"
+                        type="button"
+                        class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-medium hover:bg-gray-300">
+                    Cancel
+                </button>
+                <button @click="confirmDiscard(); showModal = false"
+                        type="button"
+                        class="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700">
+                    Discard Timer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Alpine.js Timer Widget Component
+function timerWidget() {
+    return {
+        // State
+        isRunning: false,
+        isLoading: false,
+        timerId: null,
+        taskId: null,
+        taskName: '',
+        projectId: null,
+        projectName: '',
+        description: '',
+        startTime: null,
+        elapsedSeconds: 0,
+        updateInterval: null,
+        showQuickEdit: false,
+        editDescription: '',
+        mobileExpanded: false,
+        ws: null,
+        reconnectAttempts: 0,
+        maxReconnectAttempts: 5,
+
+        // Computed
+        get formattedElapsedTime() {
+            const hours = Math.floor(this.elapsedSeconds / 3600);
+            const minutes = Math.floor((this.elapsedSeconds % 3600) / 60);
+            const seconds = this.elapsedSeconds % 60;
+            return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        },
+
+        // Initialize timer widget
+        async initializeTimer() {
+            try {
+                const response = await fetch('/api/timers/active/', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    this.loadTimerData(data);
+                    this.startCountdown();
+                } else {
+                    // No active timer
+                    this.isRunning = false;
+                }
+            } catch (error) {
+                console.error('Error loading timer:', error);
+                this.isRunning = false;
+            }
+
+            // Connect to WebSocket for real-time updates
+            this.connectWebSocket();
+        },
+
+        // Connect to WebSocket
+        connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/timer/`;
+
+            try {
+                this.ws = new WebSocket(wsUrl);
+
+                this.ws.onopen = () => {
+                    console.log('WebSocket connected');
+                    this.reconnectAttempts = 0;
+                };
+
+                this.ws.onmessage = (event) => {
+                    const message = JSON.parse(event.data);
+                    this.handleWebSocketMessage(message);
+                };
+
+                this.ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                };
+
+                this.ws.onclose = () => {
+                    console.log('WebSocket disconnected');
+                    this.handleWebSocketDisconnect();
+                };
+            } catch (error) {
+                console.error('Failed to connect WebSocket:', error);
+            }
+        },
+
+        // Handle WebSocket disconnect and reconnect
+        handleWebSocketDisconnect() {
+            if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                this.reconnectAttempts++;
+                const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
+                console.log(`Reconnecting WebSocket in ${delay}ms (attempt ${this.reconnectAttempts})`);
+                setTimeout(() => this.connectWebSocket(), delay);
+            } else {
+                console.error('Max WebSocket reconnect attempts reached');
+            }
+        },
+
+        // Handle WebSocket messages
+        handleWebSocketMessage(message) {
+            const { type, data } = message;
+
+            switch (type) {
+                case 'timer.started':
+                    this.loadTimerData(data);
+                    this.startCountdown();
+                    break;
+
+                case 'timer.stopped':
+                    this.stopCountdown();
+                    this.isRunning = false;
+                    break;
+
+                case 'timer.updated':
+                    this.loadTimerData(data);
+                    break;
+
+                case 'timer.discarded':
+                    this.stopCountdown();
+                    this.isRunning = false;
+                    break;
+
+                default:
+                    console.warn('Unknown WebSocket message type:', type);
+            }
+        },
+
+        // Load timer data from API response
+        // Handles both cache format (flat) and serializer format (nested)
+        loadTimerData(data) {
+            this.isRunning = data.is_running || false;
+            this.timerId = data.id;
+
+            // Handle both formats for task data
+            this.taskId = data.task_id || (data.task && data.task.id);
+            this.taskName = data.task_title || (data.task && data.task.title) || 'Unknown Task';
+
+            // Handle both formats for project data
+            this.projectId = data.project_id || (data.project && data.project.id);
+            this.projectName = data.project_name || (data.project && data.project.name) || '';
+
+            this.description = data.description || '';
+            this.editDescription = this.description;
+            this.startTime = data.start_time;
+            this.elapsedSeconds = data.elapsed_time || 0;
+        },
+
+        // Start countdown interval
+        startCountdown() {
+            if (this.updateInterval) {
+                clearInterval(this.updateInterval);
+            }
+            this.updateInterval = setInterval(() => {
+                if (this.isRunning) {
+                    this.elapsedSeconds++;
+                }
+            }, 1000);
+        },
+
+        // Stop countdown interval
+        stopCountdown() {
+            if (this.updateInterval) {
+                clearInterval(this.updateInterval);
+                this.updateInterval = null;
+            }
+        },
+
+        // Stop timer
+        async stopTimer() {
+            if (this.isLoading) return;
+
+            this.isLoading = true;
+            try {
+                const response = await fetch('/api/timers/stop/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCsrfToken(),
+                    },
+                });
+
+                if (response.ok) {
+                    // WebSocket will handle the UI update
+                    // But reload page to show updated time entries
+                    setTimeout(() => window.location.reload(), 500);
+                } else {
+                    const error = await response.json();
+                    alert(error.error || 'Failed to stop timer');
+                }
+            } catch (error) {
+                console.error('Error stopping timer:', error);
+                alert('Failed to stop timer. Please try again.');
+            } finally {
+                this.isLoading = false;
+            }
+        },
+
+        // Show discard confirmation dialog
+        showDiscardConfirmation() {
+            // Store data in Alpine store for modal access
+            if (!Alpine.store('timerWidget')) {
+                Alpine.store('timerWidget', {});
+            }
+            Alpine.store('timerWidget', {
+                taskName: this.taskName,
+                formattedElapsedTime: this.formattedElapsedTime,
+            });
+            window.dispatchEvent(new CustomEvent('show-discard-modal'));
+        },
+
+        // Save description
+        async saveDescription() {
+            // This would call an update endpoint (not implemented in Task Group 5)
+            // For now, just update locally
+            this.description = this.editDescription;
+            this.showQuickEdit = false;
+            // TODO: Implement PATCH /api/timers/active/ endpoint for description updates
+        },
+
+        // Get CSRF token
+        getCsrfToken() {
+            const cookie = document.cookie.split('; ').find(row => row.startsWith('csrftoken='));
+            return cookie ? cookie.split('=')[1] : '';
+        },
+    };
+}
+
+// Confirm discard function (called from modal)
+async function confirmDiscard() {
+    try {
+        const response = await fetch('/api/timers/discard/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken(),
+            },
+            body: JSON.stringify({ confirmed: true }),
+        });
+
+        if (response.ok) {
+            // WebSocket will handle the UI update
+            // But reload page to ensure consistency
+            setTimeout(() => window.location.reload(), 500);
+        } else {
+            const error = await response.json();
+            alert(error.error || 'Failed to discard timer');
+        }
+    } catch (error) {
+        console.error('Error discarding timer:', error);
+        alert('Failed to discard timer. Please try again.');
+    }
+}
+
+// Helper function for CSRF token
+function getCsrfToken() {
+    const cookie = document.cookie.split('; ').find(row => row.startsWith('csrftoken='));
+    return cookie ? cookie.split('=')[1] : '';
+}
+</script>
