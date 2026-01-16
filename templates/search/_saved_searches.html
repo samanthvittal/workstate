@@ -1,0 +1,45 @@
+<!-- Saved Searches Sidebar Section -->
+<div>
+    <div class="flex items-center justify-between px-3 mb-2">
+        <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            Saved Searches
+        </h3>
+    </div>
+
+    {% if saved_searches %}
+    <div class="space-y-1">
+        {% for saved_search in saved_searches %}
+        <div class="group flex items-center justify-between px-3 py-2 text-sm rounded-md hover:bg-gray-50">
+            <a href="{% url 'tasks:search-results' %}?q={{ saved_search.query }}{% if saved_search.filters.status %}&status={{ saved_search.filters.status }}{% endif %}{% if saved_search.filters.workspace_id %}&workspace={{ saved_search.filters.workspace_id }}{% endif %}{% if saved_search.filters.priority %}{% for p in saved_search.filters.priority %}&priority={{ p }}{% endfor %}{% endif %}"
+               class="flex-1 text-gray-700 hover:text-gray-900 truncate"
+               title="{{ saved_search.name }}">
+                <div class="flex items-center gap-2">
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                    </svg>
+                    <span class="truncate">{{ saved_search.name }}</span>
+                </div>
+            </a>
+            <button hx-delete="{% url 'tasks:search-delete' pk=saved_search.id %}"
+                    hx-confirm="Delete this saved search?"
+                    hx-target="closest div"
+                    hx-swap="outerHTML swap:1s"
+                    class="opacity-0 group-hover:opacity-100 ml-2 text-gray-400 hover:text-red-600 transition-opacity"
+                    aria-label="Delete saved search">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="px-3 py-4 text-center">
+        <svg class="mx-auto h-8 w-8 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+        </svg>
+        <p class="text-xs text-gray-500">No saved searches yet</p>
+        <p class="text-xs text-gray-400 mt-1">Save searches to access them quickly</p>
+    </div>
+    {% endif %}
+</div>

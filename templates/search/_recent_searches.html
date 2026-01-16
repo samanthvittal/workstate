@@ -1,0 +1,45 @@
+<!-- Recent Searches Sidebar Section -->
+<div>
+    <div class="flex items-center justify-between px-3 mb-2">
+        <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            Recent Searches
+        </h3>
+        {% if recent_searches %}
+        <button hx-post="{% url 'tasks:search-history-clear' %}"
+                hx-confirm="Clear all search history?"
+                hx-target="closest div"
+                hx-swap="outerHTML"
+                class="text-xs text-gray-400 hover:text-red-600"
+                aria-label="Clear search history">
+            Clear
+        </button>
+        {% endif %}
+    </div>
+
+    {% if recent_searches %}
+    <div class="space-y-1">
+        {% for search in recent_searches %}
+        <a href="{% url 'tasks:search-results' %}?q={{ search.query }}"
+           class="block px-3 py-2 text-sm text-gray-700 rounded-md hover:bg-gray-50 hover:text-gray-900">
+            <div class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div class="flex-1 min-w-0">
+                    <p class="truncate">{{ search.query }}</p>
+                    <p class="text-xs text-gray-400">{{ search.result_count }} result{{ search.result_count|pluralize }}</p>
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="px-3 py-4 text-center">
+        <svg class="mx-auto h-8 w-8 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <p class="text-xs text-gray-500">No recent searches</p>
+        <p class="text-xs text-gray-400 mt-1">Your search history will appear here</p>
+    </div>
+    {% endif %}
+</div>

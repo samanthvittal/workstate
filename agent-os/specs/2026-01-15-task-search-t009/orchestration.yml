@@ -1,0 +1,21 @@
+task_groups:
+  - name: Search Infrastructure Models and Migrations
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Search Query Service and Manager Methods
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Search Views and Endpoints
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Search UI Templates and Interactions
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Integration Testing and Gap Analysis
+    claude_code_subagent: implementer
+    standards:
+      - all
