@@ -315,9 +315,8 @@ class TestClearSearchHistoryView:
         response = client.post(url)
 
         assert response.status_code == 200
-        data = response.json()
-        assert data['success'] is True
-        assert data['deleted_count'] == 5
+        # View now returns HTML partial instead of JSON
+        assert b'recent_searches' in response.content or b'No recent searches' in response.content
 
         # Verify all history was deleted
         assert SearchHistory.objects.filter(user=user).count() == 0
