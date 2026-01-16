@@ -1,0 +1,61 @@
+task_groups:
+  - name: Database Models and Migrations
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Redis Cache Layer for Active Timers
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Core Timer API Endpoints
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Manual Time Entry API Endpoints
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Header Timer Widget UI
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Timer Start Buttons in Task UI
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Time Entries List View and Filters
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Manual Time Entry Forms
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Idle Time Detection and Celery Tasks
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Advanced Features (Pomodoro, Rounding, Suggestions)
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: WebSocket Integration for Live Updates
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Reporting and Analytics Dashboard
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: User Settings and Preferences UI
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Navigation and URL Routing
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Final Integration and Comprehensive Testing
+    claude_code_subagent: implementer
+    standards:
+      - all

@@ -628,6 +628,23 @@ class Task(models.Model):
         self.is_archived = False
         self.save(update_fields=['is_archived', 'updated_at'])
 
+    def has_active_timer(self, user):
+        """
+        Check if this task has an active timer for the given user.
+
+        Args:
+            user: User to check timer for
+
+        Returns:
+            bool: True if task has an active timer for this user
+        """
+        from time_tracking.models import TimeEntry
+        return TimeEntry.objects.filter(
+            task=self,
+            user=user,
+            is_running=True
+        ).exists()
+
     def is_overdue(self):
         """Check if task is overdue."""
         if not self.due_date or self.status == 'completed':

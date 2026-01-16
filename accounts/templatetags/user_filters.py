@@ -63,3 +63,29 @@ def get_user_color(user):
     # Use hash of user ID to consistently select a color
     hash_value = int(hashlib.md5(str(user.id).encode()).hexdigest(), 16)
     return colors[hash_value % len(colors)]
+
+
+@register.filter
+def has_active_timer(task, user):
+    """
+    Check if a task has an active timer for the given user.
+
+    Usage in templates:
+        {% if task|has_active_timer:request.user %}
+            <!-- Show stop timer button -->
+        {% else %}
+            <!-- Show start timer button -->
+        {% endif %}
+
+    Args:
+        task: Task object
+        user: User object
+
+    Returns:
+        bool: True if task has an active timer for this user
+    """
+    if not task or not user:
+        return False
+
+    # Use the has_active_timer method from Task model
+    return task.has_active_timer(user)

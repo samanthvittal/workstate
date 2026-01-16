@@ -92,6 +92,11 @@
 
             <!-- Actions -->
             <div class="flex items-center gap-2">
+                <!-- Timer Button (only for active tasks) -->
+                {% if task.status != 'completed' %}
+                    {% include 'time_tracking/components/timer_button.html' with task=task button_style='icon' button_size='small' %}
+                {% endif %}
+
                 {% if task.status == 'completed' and not task.is_archived %}
                 <button hx-post="{% url 'tasks:archive-task' pk=task.id %}"
                         hx-confirm="Archive this task?"
@@ -105,6 +110,9 @@
                     Archive
                 </button>
                 {% endif %}
+
+                <!-- Edit Button (only for active tasks) -->
+                {% if task.status != 'completed' %}
                 <a href="{% url 'tasks:task-edit' pk=task.id %}"
                    class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                    aria-label="Edit task">
@@ -113,6 +121,7 @@
                     </svg>
                     Edit
                 </a>
+                {% endif %}
             </div>
         </div>
     </div>

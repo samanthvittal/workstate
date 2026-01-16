@@ -2,11 +2,17 @@
 Shared pytest configuration and fixtures.
 """
 import pytest
-import django
 from django.conf import settings
 
-# Configure Django settings before importing Django components
-django.setup()
+# Configure test cache before Django setup
+def pytest_configure(config):
+    """Configure test settings."""
+    settings.CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'test-cache',
+        }
+    }
 
 
 @pytest.fixture(scope='session')

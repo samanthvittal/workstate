@@ -23,9 +23,27 @@
         html {
             scrollbar-gutter: stable;
         }
+
+        /* Add top padding when timer widget is active */
+        body.has-active-timer {
+            padding-top: 60px;
+        }
+        @media (min-width: 1024px) {
+            body.has-active-timer {
+                padding-top: 70px;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-50 antialiased">
+    <!-- Timer Widget (visible only when timer is active) -->
+    {% if user.is_authenticated %}
+    {% include 'time_tracking/components/timer_widget.html' %}
+
+    <!-- Idle Time Notification (visible when idle detected) -->
+    {% include 'time_tracking/components/idle_notification.html' %}
+    {% endif %}
+
     <div class="min-h-screen flex flex-col">
         <!-- Messages (Fixed at top, centered) -->
         {% if messages %}
@@ -53,5 +71,23 @@
             </div>
         </footer>
     </div>
+
+    <script>
+        // Add body class when timer widget is visible
+        document.addEventListener('alpine:initialized', () => {
+            const timerWidget = document.getElementById('timer-widget-container');
+            if (timerWidget) {
+                const observer = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        if (mutation.attributeName === 'style') {
+                            const isVisible = timerWidget.style.display !== 'none';
+                            document.body.classList.toggle('has-active-timer', isVisible);
+                        }
+                    });
+                });
+                observer.observe(timerWidget, { attributes: true });
+            }
+        });
+    </script>
 </body>
 </html>
